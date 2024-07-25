@@ -53,11 +53,7 @@ fn open(note: &str) -> anyhow::Result<()> {
     let note_path = resolve_note_path(note)?;
     let url = format!("obsidian://open?path={}", note_path.display());
 
-    // @TODO: This won't work cross-platform
-    std::process::Command::new("open")
-        .arg(&url)
-        .spawn()
-        .with_context(|| format!("could not open obsidian url `{url}`"))?;
+    open::that(&url).with_context(|| format!("could not open obsidian url `{url}`"))?;
 
     Ok(())
 }
