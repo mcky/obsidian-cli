@@ -3,6 +3,10 @@ name = "obz-cli"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "obz"
+path = "./src/main.rs"
+
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.0", features = ["derive"] }
