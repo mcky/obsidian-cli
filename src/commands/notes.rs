@@ -19,6 +19,9 @@ pub struct NotesCommand {
 enum Subcommands {
     /// Output the raw markdown contents of a note
     View(ViewArgs),
+
+    /// Open a note in Obsidian
+    Open(ViewArgs),
 }
 
 #[derive(Debug, Args, Clone)]
@@ -30,11 +33,33 @@ struct ViewArgs {
 pub fn entry(cmd: &NotesCommand) -> anyhow::Result<()> {
     match &cmd.command {
         Some(Subcommands::View(ViewArgs { note })) => view(note),
+        Some(Subcommands::Open(ViewArgs { note })) => open(note),
         None => todo!(),
-        _ => {
-            todo!();
-        }
     }
+}
+
+fn view(note: &str) -> anyhow::Result<()> {
+    let note_path = resolve_note_path(note)?;
+
+    let note_content = fs::read_to_string(note_path.clone())
+        .with_context(|| format!("could not read file `{}`", note_path.display()))?;
+
+    println!("{note_content}");
+
+    Ok(())
+}
+
+fn open(note: &str) -> anyhow::Result<()> {
+    let note_path = resolve_note_path(note)?;
+    let url = format!("obsidian://open?path={}", note_path.display());
+
+    // @TODO: This won't work cross-platform
+    std::process::Command::new("open")
+        .arg(&url)
+        .spawn()
+        .with_context(|| format!("could not open obsidian url `{url}`"))?;
+
+    Ok(())
 }
 
 fn resolve_note_path(path_or_string: &str) -> anyhow::Result<PathBuf> {
@@ -47,17 +72,6 @@ fn resolve_note_path(path_or_string: &str) -> anyhow::Result<PathBuf> {
     };
 
     return Ok(content_type);
-}
-
-fn view(note: &str) -> anyhow::Result<()> {
-    let note_path = resolve_note_path(note)?;
-
-    let note_content = fs::read_to_string(note_path.clone())
-        .with_context(|| format!("could not read file `{}`", note_path.display()))?;
-
-    println!("{note_content}");
-
-    Ok(())
 }
 
 #[cfg(test)]
