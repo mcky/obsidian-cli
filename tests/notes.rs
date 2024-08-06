@@ -142,12 +142,18 @@ mod notes {
 
         #[test]
         fn opens_in_obsidian_with_default_vault() {
-            assert_success!("notes uri simple-note.md", "obsidian://open?file=simple-note.md");
+            assert_success!(
+                "notes uri simple-note.md",
+                "obsidian://open?file=simple-note.md"
+            );
         }
 
         #[test]
         fn opens_in_obsidian_with_named_vault() {
-            assert_success!("notes uri simple-note.md --vault=other", "obsidian://open?vault=other&file=simple-note.md");
+            assert_success!(
+                "notes uri simple-note.md --vault=other",
+                "obsidian://open?vault=other&file=simple-note.md"
+            );
         }
     }
 
