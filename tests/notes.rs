@@ -125,9 +125,29 @@ mod notes {
         use super::*;
 
         #[test]
-        fn opens_in_obsidian() {
+        fn opens_in_obsidian_with_default_vault() {
             let (_dir, mut _cmd) = exec_with_fixtures("notes open simple-note.md");
             assert!(false)
+        }
+
+        #[test]
+        fn opens_in_obsidian_with_named_vault() {
+            let (_dir, mut _cmd) = exec_with_fixtures("notes open simple-note.md --vault=other");
+            assert!(false)
+        }
+    }
+
+    mod uri {
+        use super::*;
+
+        #[test]
+        fn opens_in_obsidian_with_default_vault() {
+            assert_success!("notes uri simple-note.md", "obsidian://open?file=simple-note.md");
+        }
+
+        #[test]
+        fn opens_in_obsidian_with_named_vault() {
+            assert_success!("notes uri simple-note.md --vault=other", "obsidian://open?vault=other&file=simple-note.md");
         }
     }
 

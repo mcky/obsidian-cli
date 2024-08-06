@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::{Args, Subcommand};
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use crate::{
     formats::yaml_to_json_value,
@@ -21,6 +21,9 @@ enum Subcommands {
 
     /// Open a note in the Obsidian app
     Open(OpenArgs),
+
+    /// Print the Obsidian URI of a note
+    Uri(UriArgs),
 
     /// Create a new note
     Create(CreateArgs),
@@ -67,6 +70,12 @@ struct CreateArgs {
 
 #[derive(Args, Debug, Clone)]
 struct OpenArgs {
+    #[command(flatten)]
+    common: NoteArgs,
+}
+
+#[derive(Args, Debug, Clone)]
+struct UriArgs {
     #[command(flatten)]
     common: NoteArgs,
 }
@@ -130,7 +139,8 @@ struct BacklinksArgs {
 pub fn entry(cmd: &NotesCommand) -> anyhow::Result<Option<String>> {
     match &cmd.command {
         Some(Subcommands::View(ViewArgs { common })) => view(&common.note),
-        Some(Subcommands::Open(OpenArgs { common })) => open(&common.note),
+        Some(Subcommands::Uri(UriArgs { common })) => uri(&common.note, &common.vault),
+        Some(Subcommands::Open(OpenArgs { common })) => open(&common.note, &common.vault),
         Some(Subcommands::Create(CreateArgs { common })) => create(&common.note),
         Some(Subcommands::Edit(EditArgs { common })) => edit(&common.note),
         Some(Subcommands::Path(PathArgs { common })) => path(&common.note),
@@ -155,13 +165,35 @@ fn view(note: &str) -> ObxResult {
     Ok(Some(note_content))
 }
 
-fn open(note: &str) -> ObxResult {
-    let note_path = resolve_note_path(note)?;
-    let url = format!("obsidian://open?path={}", note_path.display());
+fn obsidian_note_uri(note_path: &PathBuf, vault: &Option<String>) -> String {
+    let uri: String;
 
-    open::that(&url).with_context(|| format!("Could not open obsidian url `{url}`"))?;
+    if let Some(vault) = vault {
+        uri = format!(
+            "obsidian://open?vault={vault}&file={file}",
+            file = note_path.display()
+        );
+    } else {
+        uri = format!("obsidian://open?file={file}", file = note_path.display());
+    }
+
+    uri
+}
+
+fn open(note: &str, vault: &Option<String>) -> ObxResult {
+    let note_path = resolve_note_path(note)?;
+    let uri = obsidian_note_uri(&note_path, vault);
+
+    open::that(&uri).with_context(|| format!("Could not open obsidian url `{uri}`"))?;
 
     Ok(None)
+}
+
+fn uri(note: &str, vault: &Option<String>) -> ObxResult {
+    let note_path = resolve_note_path(note)?;
+    let uri = obsidian_note_uri(&note_path, vault);
+
+    Ok(Some(uri))
 }
 
 fn create(note: &str) -> ObxResult {
