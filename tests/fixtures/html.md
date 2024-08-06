@@ -1,0 +1,1 @@
+<h1 style="color: red; text-align: center"> This text has HTML styles </h1>
