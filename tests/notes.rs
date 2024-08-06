@@ -42,11 +42,6 @@ mod notes {
                     # Simple note
 
                     This is the contents of simple-note.md
-
-                    It contains a list
-                    - item 1
-                    - item 2
-                    - item 3
                 "# }
             );
         }
@@ -55,7 +50,7 @@ mod notes {
         fn fails_for_missing_files() {
             assert_stderr!(
                 "notes view does-not-exist.md",
-                "Could not read note does-not-exist.md"
+                "Could not read note `does-not-exist.md`"
             );
         }
     }
@@ -85,6 +80,11 @@ mod notes {
         #[test]
         fn accepts_without_extension() {
             assert_created!("notes create new-note", "new-note.md");
+        }
+
+        #[test]
+        fn accepts_paths() {
+            assert_created!("notes create folder/new-note.md", "folder/new-note.md");
         }
 
         #[test]
