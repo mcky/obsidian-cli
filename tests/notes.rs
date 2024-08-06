@@ -5,6 +5,8 @@ use assert_fs::TempDir;
 use indoc::indoc;
 use predicates::prelude::*;
 
+use serde_json::json;
+
 mod utils;
 use utils::*;
 
@@ -150,7 +152,7 @@ mod notes {
         #[test]
         fn prints_frontmatter_properties_as_table() {
             assert_success!(
-                "notes properties with-properties-fm.md",
+                "notes properties with-fm-properties.md",
                 indoc! { r#"
                 | property      | value        |
                 |---------------|--------------|
@@ -178,10 +180,14 @@ mod notes {
         #[test]
         fn prints_properties_as_json() {
             assert_success!(
-                "notes properties with-properties-fm.md -f json",
-                indoc! { r#"
-                {"test-number": 100}
-                "# }
+                "notes properties with-fm-properties.md -f json",
+                json!({
+                    "test-number": 100,
+                    "test-str": "a string val",
+                    "test-checkbox": true,
+                    "test-list": ["One","Two"]
+                })
+                .to_string()
             );
         }
     }

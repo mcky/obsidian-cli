@@ -3,6 +3,9 @@ use std::process::exit;
 use clap::{Parser, Subcommand};
 
 pub mod commands;
+pub mod formats;
+pub mod obsidian_note;
+pub mod util;
 
 #[derive(Parser)]
 struct Cli {
@@ -20,9 +23,6 @@ fn main() -> anyhow::Result<()> {
 
     let res = match &cli.command {
         Some(Commands::Notes(args)) => commands::notes::entry(args),
-        Some(cmd) => {
-            todo!("command {cmd:?}");
-        }
         None => {
             todo!("Needs a sub-command");
         }

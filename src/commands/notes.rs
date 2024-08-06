@@ -1,10 +1,10 @@
 use anyhow::Context;
 use clap::{Args, Subcommand};
-use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    fs,
-    path::{Path, PathBuf},
+use std::fs;
+
+use crate::{
+    formats::yaml_to_json_value,
+    util::{read_note, resolve_note_path},
 };
 
 #[derive(Args, Debug, Clone)]
@@ -135,7 +135,9 @@ pub fn entry(cmd: &NotesCommand) -> anyhow::Result<Option<String>> {
         Some(Subcommands::Edit(EditArgs { common })) => edit(&common.note),
         Some(Subcommands::Path(PathArgs { common })) => path(&common.note),
         Some(Subcommands::Render(RenderArgs { common })) => render(&common.note),
-        Some(Subcommands::Properties(PropertiesArgs { common, .. })) => properties(&common.note),
+        Some(Subcommands::Properties(PropertiesArgs { common, format, .. })) => {
+            properties(&common.note, format)
+        }
         Some(Subcommands::Export(ExportArgs { common, .. })) => export(&common.note),
         Some(Subcommands::Backlinks(BacklinksArgs { common, .. })) => backlinks(&common.note),
         None => todo!(),
@@ -172,58 +174,43 @@ fn create(note: &str) -> ObxResult {
     Ok(None)
 }
 
-fn edit(note: &str) -> ObxResult {
+fn edit(_note: &str) -> ObxResult {
     todo!()
 }
 
-fn path(note: &str) -> ObxResult {
+fn path(_note: &str) -> ObxResult {
     todo!()
 }
 
-fn render(note: &str) -> ObxResult {
+fn render(_note: &str) -> ObxResult {
     todo!()
 }
 
-fn properties(note: &str) -> ObxResult {
-    todo!()
-}
+fn properties(note: &str, format: &ExportFormatOption) -> ObxResult {
+    let note_path = resolve_note_path(note)?;
 
-fn export(note: &str) -> ObxResult {
-    todo!()
-}
+    let note = read_note(&note_path).with_context(|| "could not parse note")?;
 
-fn backlinks(note: &str) -> ObxResult {
-    todo!()
-}
-
-fn resolve_note_path(path_or_string: &str) -> anyhow::Result<PathBuf> {
-    let file_path = Path::new(path_or_string);
-
-    let content_type: PathBuf = match file_path.extension().and_then(OsStr::to_str) {
-        Some("md") => file_path.to_path_buf().to_owned(),
-        Some(_) => file_path.to_owned(),
-        None => file_path.with_extension("md"),
+    let Some(properties) = note.properties else {
+        return Ok(None);
     };
 
-    return Ok(content_type);
+    let formatted = match format {
+        ExportFormatOption::Json => {
+            let as_json_value = yaml_to_json_value(&properties);
+            serde_json::to_string(&as_json_value)?
+        }
+        ExportFormatOption::Pretty => todo!(),
+        ExportFormatOption::Html => todo!(),
+    };
+
+    Ok(Some(formatted))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use test_case::test_case;
+fn export(_note: &str) -> ObxResult {
+    todo!()
+}
 
-    #[test_case("foo", "foo.md" ; "plain filename")]
-    #[test_case("bar/foo", "bar/foo.md" ; "with path")]
-    #[test_case("foo.txt", "foo.txt" ; "with another extension")]
-    #[test_case("foo.md", "foo.md" ; "with markdown extension")]
-    fn note_path_resolves(input: &str, expected: &str) {
-        assert_eq!(resolve_note_path(input).unwrap(), PathBuf::from(expected))
-    }
-
-    #[test]
-    #[ignore]
-    fn note_path_errors_on_invalid() {
-        assert!(resolve_note_path(" ").is_err());
-    }
+fn backlinks(_note: &str) -> ObxResult {
+    todo!()
 }
