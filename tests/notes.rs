@@ -1,13 +1,9 @@
-use assert_cmd::prelude::*;
-use assert_cmd::Command;
 use assert_fs::prelude::*;
 use assert_fs::TempDir;
 use indoc::indoc;
-use predicates::prelude::*;
-
-use serde_json::json;
-
 mod utils;
+use predicates::prelude::*;
+use serde_json::json;
 use utils::*;
 
 mod notes {
@@ -105,19 +101,80 @@ mod notes {
     }
 
     mod edit {
+        use std::{env, fs};
+
+        use assert_fs::fixture::ChildPath;
+
         use super::*;
+
+        fn create_editor(content: &str) -> (ChildPath, TempDir) {
+            let temp_dir = TempDir::new().unwrap();
+
+            // Create a mock editor script, we can verify it's been called
+            // because it will append to the file
+            let mock_editor = temp_dir.child("mock_editor.sh");
+            let editor_content: String = format!("#!/bin/sh\n{content}");
+
+            mock_editor.write_str(&editor_content).unwrap();
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(mock_editor.path(), fs::Permissions::from_mode(0o755)).unwrap();
+            }
+
+            #[cfg(not(unix))]
+            {
+                todo!();
+            }
+
+            (mock_editor, temp_dir)
+        }
 
         #[test]
         fn opens_editor() {
-            // Opens in $EDITOR
-            let (_dir, _cmd) = exec_with_fixtures("notes edit simple-note.md");
-            assert!(false);
+            let (mock_editor, editor_tmp_dir) =
+                create_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
+            let (dir, mut cmd) = exec_with_fixtures("notes edit simple-note.md");
+
+            cmd.env("EDITOR", &mock_editor.path().to_str().unwrap());
+            cmd.assert().success();
+
+            let edit_file = dir.child("simple-note.md");
+
+            edit_file.assert(predicate::str::contains("This was appended by $EDITOR"));
+
+            editor_tmp_dir.close().unwrap();
+        }
+
+        #[test]
+        fn prints_on_editor_missing() {
+            let (_dir, mut cmd) = exec_with_fixtures("notes edit simple-note.md");
+
+            cmd.env_clear();
+            cmd.assert()
+                .failure()
+                .stderr(predicates::str::contains("$EDITOR not found"));
+        }
+
+        #[test]
+        fn prints_on_editor_fail() {
+            let (mock_editor, editor_tmp_dir) = create_editor(r#"exit 1"#);
+            let (_dir, mut cmd) = exec_with_fixtures("notes edit simple-note.md");
+
+            cmd.env("EDITOR", &mock_editor.path().to_str().unwrap());
+            cmd.assert().failure().stderr(predicates::str::contains(
+                "Editor exited with non-0 exit code",
+            ));
+
+            editor_tmp_dir.close().unwrap();
         }
 
         #[test]
         fn prompts_to_create_if_missing() {
             let (_dir, _cmd) = exec_with_fixtures("notes edit new-note.md");
             assert!(false);
+            // edit_file.assert(predicate::path::exists());
         }
     }
 

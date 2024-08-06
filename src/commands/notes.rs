@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::{Args, Subcommand};
-use std::{fs, path::PathBuf};
+use std::{env, fs, path::PathBuf, process};
 
 use crate::{
     formats::yaml_to_json_value,
@@ -206,8 +206,23 @@ fn create(note: &str) -> ObxResult {
     Ok(None)
 }
 
-fn edit(_note: &str) -> ObxResult {
-    todo!()
+fn edit(note: &str) -> ObxResult {
+    let note_path = resolve_note_path(note)?;
+
+    let editor = env::var("EDITOR").context("$EDITOR not found")?;
+
+    let editor_status = process::Command::new(&editor)
+        .arg(&note_path)
+        .status()
+        .with_context(|| format!("failed to execute $EDITOR={editor}"))?;
+
+    if editor_status.success() {
+        // @TODO: this isn't strictly true, discarding changes with :q!
+        // in vim will still show this message
+        Ok(Some(format!("Saved changes to {}", note_path.display())))
+    } else {
+        Err(anyhow::Error::msg("Editor exited with non-0 exit code"))
+    }
 }
 
 fn path(_note: &str) -> ObxResult {
