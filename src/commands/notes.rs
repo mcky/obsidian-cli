@@ -1,5 +1,6 @@
 use anyhow::Context;
 use clap::{Args, Subcommand};
+use dialoguer::Confirm;
 use std::{env, fs, path::PathBuf, process};
 
 use crate::{
@@ -207,7 +208,26 @@ fn create(note: &str) -> ObxResult {
 }
 
 fn edit(note: &str) -> ObxResult {
-    let note_path = resolve_note_path(note)?;
+    let note_path = resolve_note_path(&note)?;
+
+    let note_exists = note_path.exists();
+
+    if !note_exists {
+        let prompt = format!("The note {note} does not exist, would you like to create it?");
+
+        let confirmation = Confirm::new()
+            .with_prompt(prompt)
+            .interact()
+            .context("couldn't prompt user for confirmation to create note")?;
+
+        if confirmation {
+            fs::File::create(&note_path).with_context(|| {
+                format!("failed to create new note at {}", &note_path.display())
+            })?;
+        } else {
+            return Ok(None);
+        }
+    }
 
     let editor = env::var("EDITOR").context("$EDITOR not found")?;
 
@@ -219,7 +239,7 @@ fn edit(note: &str) -> ObxResult {
     if editor_status.success() {
         // @TODO: this isn't strictly true, discarding changes with :q!
         // in vim will still show this message
-        Ok(Some(format!("Saved changes to {}", note_path.display())))
+        Ok(Some(format!("Saved changes to {}", &note_path.display())))
     } else {
         Err(anyhow::Error::msg("Editor exited with non-0 exit code"))
     }
