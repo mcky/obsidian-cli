@@ -101,9 +101,9 @@ mod notes {
     }
 
     mod edit {
-        use std::{env, fs};
-
         use assert_fs::fixture::ChildPath;
+        use rexpect::spawn_bash;
+        use std::{fs, process};
 
         use super::*;
 
@@ -170,11 +170,77 @@ mod notes {
             editor_tmp_dir.close().unwrap();
         }
 
+        // These tests jump through some extra hoops to simulate a tty in order
+        // to test interaction. Instead of calling `cmd.assert()` we spawn a bash
+        // shell and assert on the lines
+        // 
+        // When these issues are resolved we might be able to drop back to assert_cmd
+        // Expose a testing API that accepts a sequence of commands and/or keystrokes to execute the prompt. #71
+        // https://github.com/mikaelmello/inquire/issues/71
+        // Unable to test TTY behavior #138
+        // https://github.com/assert-rs/assert_cmd/issues/138
         #[test]
         fn prompts_to_create_if_missing() {
-            let (_dir, _cmd) = exec_with_fixtures("notes edit new-note.md");
-            assert!(false);
-            // edit_file.assert(predicate::path::exists());
+            let (mock_editor, editor_tmp_dir) =
+                create_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
+            let (dir, mut cmd) = exec_with_fixtures("notes edit new-note.md");
+
+            cmd.env("EDITOR", &mock_editor.path().to_str().unwrap());
+
+            let edit_file = dir.child("new-note.md");
+
+            // Take our usual cmd but instead of asserting on it, convert it into
+            // a string, then split it into the `cd $dir` and `cmd $args` parts
+            let cmd_str = &format!("{:?}", process::Command::from(cmd));
+            let cmd_parts = cmd_str.split(" && ").collect::<Vec<&str>>();
+            let [cd_cmd, bin_cmd] = &cmd_parts[..] else {
+                panic!("couldn't split cmd_parts")
+            };
+
+            let mut p = spawn_bash(Some(1_000)).unwrap();
+
+            p.send_line(&cd_cmd).unwrap();
+            p.send_line(&bin_cmd).unwrap();
+
+            p.exp_string("The note new-note.md does not exist, would you like to create it? [y/n]")
+                .unwrap();
+
+            p.send_line("y").unwrap();
+
+            p.exp_string("Saved changes to new-note.md").unwrap();
+
+            edit_file.assert(predicate::str::contains("This was appended by $EDITOR"));
+
+            editor_tmp_dir.close().unwrap();
+        }
+
+        #[test]
+        fn does_not_create_if_prompt_rejected() {
+            let (dir, cmd) = exec_with_fixtures("notes edit new-note.md");
+
+            let edit_file = dir.child("new-note.md");
+
+            // Take our usual cmd but instead of asserting on it, convert it into
+            // a string, then split it into the `cd $dir` and `cmd $args` parts
+            let cmd_str = &format!("{:?}", process::Command::from(cmd));
+            let cmd_parts = cmd_str.split(" && ").collect::<Vec<&str>>();
+            let [cd_cmd, bin_cmd] = &cmd_parts[..] else {
+                panic!("couldn't split cmd_parts")
+            };
+
+            let mut p = spawn_bash(Some(1_000)).unwrap();
+
+            p.send_line(&cd_cmd).unwrap();
+            p.send_line(&bin_cmd).unwrap();
+
+            p.exp_string("The note new-note.md does not exist, would you like to create it? [y/n]")
+                .unwrap();
+
+            p.send_line("n").unwrap();
+
+            p.exp_string("Aborted").unwrap();
+
+            edit_file.assert(predicate::path::missing());
         }
     }
 
