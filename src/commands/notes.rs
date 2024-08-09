@@ -211,8 +211,9 @@ fn edit(note: &str) -> ObxResult {
     let note_path = resolve_note_path(&note)?;
 
     let note_exists = note_path.exists();
+    let term_is_attended = console::user_attended();
 
-    if !note_exists {
+    if !note_exists && term_is_attended {
         let prompt = format!("The note {note} does not exist, would you like to create it?");
 
         let confirmation = Confirm::new()
@@ -225,7 +226,7 @@ fn edit(note: &str) -> ObxResult {
                 format!("failed to create new note at {}", &note_path.display())
             })?;
         } else {
-            return Ok(None);
+            return Ok(Some("Aborted".to_string()));
         }
     }
 
