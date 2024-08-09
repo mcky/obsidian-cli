@@ -83,6 +83,10 @@ struct UriArgs {
 
 #[derive(Args, Debug, Clone)]
 struct EditArgs {
+    /// create the file if it doesn't already exist
+    #[arg(long, action)]
+    create: bool,
+
     #[command(flatten)]
     common: NoteArgs,
 }
@@ -143,7 +147,10 @@ pub fn entry(cmd: &NotesCommand) -> anyhow::Result<Option<String>> {
         Some(Subcommands::Uri(UriArgs { common })) => uri(&common.note, &common.vault),
         Some(Subcommands::Open(OpenArgs { common })) => open(&common.note, &common.vault),
         Some(Subcommands::Create(CreateArgs { common })) => create(&common.note),
-        Some(Subcommands::Edit(EditArgs { common })) => edit(&common.note),
+        Some(Subcommands::Edit(EditArgs {
+            common,
+            create: should_create,
+        })) => edit(&common.note, should_create),
         Some(Subcommands::Path(PathArgs { common })) => path(&common.note),
         Some(Subcommands::Render(RenderArgs { common })) => render(&common.note),
         Some(Subcommands::Properties(PropertiesArgs { common, format, .. })) => {
@@ -207,21 +214,25 @@ fn create(note: &str) -> ObxResult {
     Ok(None)
 }
 
-fn edit(note: &str) -> ObxResult {
+fn edit(note: &str, create_flag: &bool) -> ObxResult {
     let note_path = resolve_note_path(&note)?;
 
     let note_exists = note_path.exists();
     let term_is_attended = console::user_attended();
 
-    if !note_exists && term_is_attended {
-        let prompt = format!("The note {note} does not exist, would you like to create it?");
+    if !note_exists {
+        let mut confirmation = false;
 
-        let confirmation = Confirm::new()
-            .with_prompt(prompt)
-            .interact()
-            .context("couldn't prompt user for confirmation to create note")?;
+        if term_is_attended && !create_flag {
+            let prompt = format!("The note {note} does not exist, would you like to create it?");
 
-        if confirmation {
+            confirmation = Confirm::new()
+                .with_prompt(prompt)
+                .interact()
+                .context("couldn't prompt user for confirmation to create note")?;
+        }
+
+        if confirmation || *create_flag {
             fs::File::create(&note_path).with_context(|| {
                 format!("failed to create new note at {}", &note_path.display())
             })?;
