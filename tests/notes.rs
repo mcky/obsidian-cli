@@ -11,22 +11,22 @@ mod notes {
 
     #[test]
     fn accepts_full_paths() {
-        assert_success!("notes view simple-note.md");
+        Obz::from_command("notes view simple-note.md").assert_success()
     }
 
     #[test]
     fn accepts_without_extension() {
-        assert_success!("notes view simple-note");
+        Obz::from_command("notes view simple-note").assert_success()
     }
 
     #[test]
     fn accepts_paths() {
-        assert_success!("notes view folder/child-note.md");
+        Obz::from_command("notes view folder/child-note.md").assert_success()
     }
 
     #[test]
     fn allows_switching_vault() {
-        assert_success!("notes view from-another-vault --vault=other");
+        Obz::from_command("notes view from-another-vault --vault=other").assert_success()
     }
 
     mod view {
@@ -34,22 +34,19 @@ mod notes {
 
         #[test]
         fn prints_note_markdown_content() {
-            assert_success!(
-                "notes view simple-note.md",
-                indoc! { r#"
-                    # Simple note
+            Obz::from_command("notes view simple-note.md").assert_stdout(indoc! {
+            r#"
+                # Simple note
 
-                    This is the contents of simple-note.md
-                "# }
-            );
+                This is the contents of simple-note.md
+            "#
+            })
         }
 
         #[test]
         fn fails_for_missing_files() {
-            assert_stderr!(
-                "notes view does-not-exist.md",
-                "Could not read note `does-not-exist.md`"
-            );
+            Obz::from_command("notes view does-not-exist.md")
+                .assert_stderr("Could not read note `does-not-exist.md`");
         }
     }
 
@@ -58,12 +55,11 @@ mod notes {
 
         #[test]
         fn pretty_prints_note() {
-            assert_success!(
-                "notes view simple-note.md",
-                indoc! { r#"
-                    Simple note pretty printed
-                "# }
-            );
+            Obz::from_command("notes view simple-note.md").assert_stdout(indoc! {
+            r#"
+                Simple note pretty printed
+            "#
+            });
         }
     }
 
@@ -72,25 +68,24 @@ mod notes {
 
         #[test]
         fn creates_new_note_file() {
-            assert_created!("notes create new-note.md", "new-note.md");
+            Obz::from_command("notes create new-note.md").assert_created("new-note.md")
         }
 
         #[test]
         fn accepts_without_extension() {
-            assert_created!("notes create new-note", "new-note.md");
+            Obz::from_command("notes create new-note").assert_created("new-note.md");
         }
 
         #[test]
         fn accepts_paths() {
-            assert_created!("notes create folder/new-note.md", "folder/new-note.md");
+            Obz::from_command("notes create folder/new-note.md")
+                .assert_created("folder/new-note.md");
         }
 
         #[test]
         fn allows_switching_vault() {
-            assert_created!(
-                "notes create in-another-vault --vault=other",
-                "other-vault/in-another-vault.md"
-            );
+            Obz::from_command("notes create in-another-vault --vault=other")
+                .assert_created("other-vault/in-another-vault.md");
         }
 
         #[test]
@@ -173,7 +168,7 @@ mod notes {
         // These tests jump through some extra hoops to simulate a tty in order
         // to test interaction. Instead of calling `cmd.assert()` we spawn a bash
         // shell and assert on the lines
-        // 
+        //
         // When these issues are resolved we might be able to drop back to assert_cmd
         // Expose a testing API that accepts a sequence of commands and/or keystrokes to execute the prompt. #71
         // https://github.com/mikaelmello/inquire/issues/71
@@ -265,18 +260,14 @@ mod notes {
 
         #[test]
         fn opens_in_obsidian_with_default_vault() {
-            assert_success!(
-                "notes uri simple-note.md",
-                "obsidian://open?file=simple-note.md"
-            );
+            Obz::from_command("notes uri simple-note.md")
+                .assert_stdout("obsidian://open?file=simple-note.md");
         }
 
         #[test]
         fn opens_in_obsidian_with_named_vault() {
-            assert_success!(
-                "notes uri simple-note.md --vault=other",
-                "obsidian://open?vault=other&file=simple-note.md"
-            );
+            Obz::from_command("notes uri simple-note.md --vault=other")
+                .assert_stdout("obsidian://open?vault=other&file=simple-note.md");
         }
     }
 
@@ -300,43 +291,38 @@ mod notes {
 
         #[test]
         fn prints_frontmatter_properties_as_table() {
-            assert_success!(
-                "notes properties with-fm-properties.md",
-                indoc! { r#"
+            Obz::from_command("notes properties with-fm-properties.md").assert_stdout(indoc! { r#"
                 | property      | value        |
                 |---------------|--------------|
                 | test-number   | 100          |
                 | test-str      | a string val |
                 | test-checkbox | true         |
                 | test-list     | One, Two     |
-                "# }
-            );
+                "# });
         }
 
         #[test]
         fn prints_meta_properties() {
-            assert_success!(
-                "notes properties empty-note.md --include-meta",
+            Obz::from_command("notes properties empty-note.md --include-meta").assert_stdout(
                 indoc! { r#"
                 | property      | value                  |
                 |---------------|------------------------|
                 | path          | /path/to/empty-note.md |
                 | created-at    | xxxx                   |
-                "# }
+                "# },
             );
         }
 
         #[test]
         fn prints_properties_as_json() {
-            assert_success!(
-                "notes properties with-fm-properties.md -f json",
+            Obz::from_command("notes properties with-fm-properties.md -f json").assert_stdout(
                 json!({
                     "test-number": 100,
                     "test-str": "a string val",
                     "test-checkbox": true,
                     "test-list": ["One","Two"]
                 })
-                .to_string()
+                .to_string(),
             );
         }
     }
@@ -346,23 +332,21 @@ mod notes {
 
         #[test]
         fn prints_backlinks_as_table() {
-            assert_success!(
-                "notes backlinks backlinked-to.md -f json",
+            Obz::from_command("notes backlinks backlinked-to.md -f json").assert_stdout(
                 indoc! { r#"
                 | note          | reference                  |
                 |---------------|----------------------------|
                 | /path/to/another-file.md | [[My backlink]] |
-                "# }
+                "# },
             );
         }
 
         #[test]
         fn prints_backlinks_as_json() {
-            assert_success!(
-                "notes backlinks backlinked-to.md -f json",
+            Obz::from_command("notes backlinks backlinked-to.md -f json").assert_stdout(
                 indoc! { r#"
                 [{"note": "/path/to/another-file.md", "reference": "[[My backlink]]"}]
-                "# }
+                "# },
             );
         }
     }
@@ -372,9 +356,7 @@ mod notes {
 
         #[test]
         fn exports_to_html() {
-            assert_success!(
-                "notes export complex-note.md -f html",
-                indoc! { r#"
+            Obz::from_command("notes export complex-note.md -f html").assert_stdout(indoc! { r#"
                     <table>
                         <thead>
                             <tr>
@@ -393,18 +375,14 @@ mod notes {
                     <h1>Rich note</h1>
 
                     <p>This is the contents of complex-note.md</p>
-                "# }
-            );
+                "# });
         }
 
         #[test]
         fn exports_to_json() {
-            assert_success!(
-                "notes export complex-note.md -f json",
-                indoc! { r#"
+            Obz::from_command("notes export complex-note.md -f json").assert_stdout(indoc! { r#"
                 [{"note": "/path/to/another-file.md", "properties": {}, "body": ""}]
-                "# }
-            );
+                "# });
         }
     }
 }
