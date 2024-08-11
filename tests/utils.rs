@@ -1,20 +1,18 @@
-use std::ffi;
-use std::path::Path;
-
-use assert_cmd::prelude::*;
 use assert_cmd::Command;
+use assert_fs::fixture::ChildPath;
 use assert_fs::prelude::*;
 use assert_fs::TempDir;
-use indoc::indoc;
 use predicates::prelude::*;
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug)]
-pub struct ObzTest {
-    cmd: assert_cmd::Command,
+pub struct Obz {
+    pub cmd: assert_cmd::Command,
     pub temp_dir: TempDir,
 }
 
-impl ObzTest {
+impl Obz {
     pub fn from_command(command_str: &str) -> Self {
         let temp_dir = create_fixtures();
 
@@ -27,10 +25,21 @@ impl ObzTest {
             cmd.arg(arg);
         }
 
-        ObzTest { cmd, temp_dir }
+        Obz { cmd, temp_dir }.with_editor("")
     }
 
-    pub fn assert_created<P>(mut self, file_path: P) -> ()
+    pub fn with_editor<S>(mut self, editor_script: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let mock_editor = create_editor_script(editor_script, &self.temp_dir);
+        self.cmd
+            .env("EDITOR", &mock_editor.path().to_str().unwrap());
+
+        self
+    }
+
+    pub fn assert_created<P>(mut self, file_path: P) -> Self
     where
         P: AsRef<Path>,
     {
@@ -38,9 +47,11 @@ impl ObzTest {
         self.temp_dir
             .child(file_path)
             .assert(predicate::path::exists());
+
+        self
     }
 
-    pub fn assert_content<P>(mut self, file_path: P, file_content: &str) -> ()
+    pub fn assert_content<P>(mut self, file_path: P, file_content: &str) -> Self
     where
         P: AsRef<Path>,
     {
@@ -50,14 +61,15 @@ impl ObzTest {
             .assert(predicate::path::exists())
             .assert(predicates::str::contains(file_content.trim()));
 
-        ()
+        self
     }
 
-    pub fn assert_success(mut self) -> () {
+    pub fn assert_success(mut self) -> Self {
         self.cmd.assert().success();
+        self
     }
 
-    pub fn assert_stdout<S>(mut self, stdout_match: S) -> ()
+    pub fn assert_stdout<S>(mut self, stdout_match: S) -> Self
     where
         S: Into<String>,
     {
@@ -65,9 +77,10 @@ impl ObzTest {
             .assert()
             .success()
             .stdout(predicates::str::contains(stdout_match));
+        self
     }
 
-    pub fn assert_stderr<S>(mut self, stderr_match: S) -> ()
+    pub fn assert_stderr<S>(mut self, stderr_match: S) -> Self
     where
         S: Into<String>,
     {
@@ -75,6 +88,7 @@ impl ObzTest {
             .assert()
             .failure()
             .stderr(predicates::str::contains(stderr_match));
+        self
     }
 }
 
@@ -107,4 +121,29 @@ pub fn get_cmd(dir: &TempDir, command_str: &str) -> Command {
     }
 
     return cmd;
+}
+
+pub fn create_editor_script<S>(content: S, temp_dir: &TempDir) -> ChildPath
+where
+    S: Into<String>,
+{
+    // Create a mock editor script, we can verify it's been called
+    // because it will append to the file
+    let mock_editor = temp_dir.child("mock_editor.sh");
+    let editor_content: String = format!("#!/bin/sh\n{}", content.into());
+
+    mock_editor.write_str(&editor_content).unwrap();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(mock_editor.path(), fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    #[cfg(not(unix))]
+    {
+        todo!();
+    }
+
+    mock_editor
 }

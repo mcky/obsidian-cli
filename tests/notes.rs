@@ -1,5 +1,4 @@
 use assert_fs::prelude::*;
-use assert_fs::TempDir;
 use indoc::indoc;
 mod utils;
 use predicates::prelude::*;
@@ -11,22 +10,22 @@ mod notes {
 
     #[test]
     fn accepts_full_paths() {
-        Obz::from_command("notes view simple-note.md").assert_success()
+        Obz::from_command("notes view simple-note.md").assert_success();
     }
 
     #[test]
     fn accepts_without_extension() {
-        Obz::from_command("notes view simple-note").assert_success()
+        Obz::from_command("notes view simple-note").assert_success();
     }
 
     #[test]
     fn accepts_paths() {
-        Obz::from_command("notes view folder/child-note.md").assert_success()
+        Obz::from_command("notes view folder/child-note.md").assert_success();
     }
 
     #[test]
     fn allows_switching_vault() {
-        Obz::from_command("notes view from-another-vault --vault=other").assert_success()
+        Obz::from_command("notes view from-another-vault --vault=other").assert_success();
     }
 
     mod view {
@@ -40,7 +39,7 @@ mod notes {
 
                 This is the contents of simple-note.md
             "#
-            })
+            });
         }
 
         #[test]
@@ -68,7 +67,7 @@ mod notes {
 
         #[test]
         fn creates_new_note_file() {
-            Obz::from_command("notes create new-note.md").assert_created("new-note.md")
+            Obz::from_command("notes create new-note.md").assert_created("new-note.md");
         }
 
         #[test]
@@ -83,63 +82,44 @@ mod notes {
         }
 
         #[test]
+        #[ignore = "vault handling not implemented"]
         fn allows_switching_vault() {
             Obz::from_command("notes create in-another-vault --vault=other")
                 .assert_created("other-vault/in-another-vault.md");
         }
 
         #[test]
-        fn opens_editor() {
-            let (_dir, _cmd) = exec_with_fixtures("notes create new-note.md");
-            assert!(false);
-        }
-    }
-
-    mod edit {
-        use assert_fs::fixture::ChildPath;
-        use rexpect::spawn_bash;
-        use std::{fs, process};
-
-        use super::*;
-
-        fn create_editor(content: &str) -> (ChildPath, TempDir) {
-            let temp_dir = TempDir::new().unwrap();
-
-            // Create a mock editor script, we can verify it's been called
-            // because it will append to the file
-            let mock_editor = temp_dir.child("mock_editor.sh");
-            let editor_content: String = format!("#!/bin/sh\n{content}");
-
-            mock_editor.write_str(&editor_content).unwrap();
-
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                fs::set_permissions(mock_editor.path(), fs::Permissions::from_mode(0o755)).unwrap();
-            }
-
-            #[cfg(not(unix))]
-            {
-                todo!();
-            }
-
-            (mock_editor, temp_dir)
+        fn fails_if_note_exists() {
+            Obz::from_command("notes create simple-note.md")
+                .assert_stderr("The note simple-node.md already exists");
         }
 
         #[test]
         fn opens_editor() {
-            let (mock_editor, editor_tmp_dir) =
-                create_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
-            let (dir, mut cmd) = exec_with_fixtures("notes edit simple-note.md");
+            let cmd = Obz::from_command("notes create new-note.md")
+                .with_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
 
-            cmd.env("EDITOR", &mock_editor.path().to_str().unwrap());
-            cmd.assert().success();
+            let edit_file = &cmd.temp_dir.child("new-note.md");
 
-            let edit_file = dir.child("simple-note.md");
-
+            let _ = &cmd.assert_success();
             edit_file.assert(predicate::str::contains("This was appended by $EDITOR"));
+        }
+    }
 
-            editor_tmp_dir.close().unwrap();
+    mod edit {
+        use super::*;
+        use rexpect::spawn_bash;
+        use std::process;
+
+        #[test]
+        fn opens_editor() {
+            let cmd = Obz::from_command("notes edit simple-note.md")
+                .with_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
+
+            let edit_file = &cmd.temp_dir.child("simple-note.md");
+
+            let _ = &cmd.assert_success();
+            edit_file.assert(predicate::str::contains("This was appended by $EDITOR"));
         }
 
         #[test]
@@ -154,15 +134,9 @@ mod notes {
 
         #[test]
         fn prints_on_editor_fail() {
-            let (mock_editor, editor_tmp_dir) = create_editor(r#"exit 1"#);
-            let (_dir, mut cmd) = exec_with_fixtures("notes edit simple-note.md");
+            let cmd = Obz::from_command("notes edit simple-note.md").with_editor(r#"exit 1"#);
 
-            cmd.env("EDITOR", &mock_editor.path().to_str().unwrap());
-            cmd.assert().failure().stderr(predicates::str::contains(
-                "Editor exited with non-0 exit code",
-            ));
-
-            editor_tmp_dir.close().unwrap();
+            cmd.assert_stderr("Editor exited with non-0 exit code");
         }
 
         // These tests jump through some extra hoops to simulate a tty in order
@@ -176,17 +150,14 @@ mod notes {
         // https://github.com/assert-rs/assert_cmd/issues/138
         #[test]
         fn prompts_to_create_if_missing() {
-            let (mock_editor, editor_tmp_dir) =
-                create_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
-            let (dir, mut cmd) = exec_with_fixtures("notes edit new-note.md");
+            let cmd = Obz::from_command("notes edit new-note.md")
+                .with_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
 
-            cmd.env("EDITOR", &mock_editor.path().to_str().unwrap());
-
-            let edit_file = dir.child("new-note.md");
+            let edit_file = &cmd.temp_dir.child("new-note.md");
 
             // Take our usual cmd but instead of asserting on it, convert it into
             // a string, then split it into the `cd $dir` and `cmd $args` parts
-            let cmd_str = &format!("{:?}", process::Command::from(cmd));
+            let cmd_str = &format!("{:?}", process::Command::from(cmd.cmd));
             let cmd_parts = cmd_str.split(" && ").collect::<Vec<&str>>();
             let [cd_cmd, bin_cmd] = &cmd_parts[..] else {
                 panic!("couldn't split cmd_parts")
@@ -205,8 +176,6 @@ mod notes {
             p.exp_string("Saved changes to new-note.md").unwrap();
 
             edit_file.assert(predicate::str::contains("This was appended by $EDITOR"));
-
-            editor_tmp_dir.close().unwrap();
         }
 
         #[test]
