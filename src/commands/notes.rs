@@ -211,7 +211,20 @@ fn create(note: &str) -> ObxResult {
     fs::write(&note_path, &note_contents)
         .with_context(|| format!("Could not create note {}", note_path.display()))?;
 
-    Ok(None)
+    let editor = env::var("EDITOR").context("$EDITOR not found")?;
+
+    let editor_status = process::Command::new(&editor)
+        .arg(&note_path)
+        .status()
+        .with_context(|| format!("failed to execute $EDITOR={editor}"))?;
+
+    if editor_status.success() {
+        // @TODO: this isn't strictly true, discarding changes with :q!
+        // in vim will still show this message
+        Ok(Some(format!("Created note {}", &note_path.display())))
+    } else {
+        Err(anyhow::Error::msg("Editor exited with non-0 exit code"))
+    }
 }
 
 fn edit(note: &str, create_flag: &bool) -> ObxResult {
