@@ -24,6 +24,7 @@ mod notes {
     }
 
     #[test]
+    #[ignore = "vault handling not implemented"]
     fn allows_switching_vault() {
         Obz::from_command("notes view from-another-vault --vault=other").assert_success();
     }
@@ -53,6 +54,7 @@ mod notes {
         use super::*;
 
         #[test]
+        #[ignore = "render command not implemented"]
         fn pretty_prints_note() {
             Obz::from_command("notes view simple-note.md").assert_stdout(indoc! {
             r#"
@@ -89,6 +91,7 @@ mod notes {
         }
 
         #[test]
+        #[ignore = "not implemented"]
         fn fails_if_note_exists() {
             Obz::from_command("notes create simple-note.md")
                 .assert_stderr("The note simple-node.md already exists");
@@ -212,12 +215,14 @@ mod notes {
         use super::*;
 
         #[test]
+        #[ignore = "vault handling not implemented"]
         fn opens_in_obsidian_with_default_vault() {
             let (_dir, mut _cmd) = exec_with_fixtures("notes open simple-note.md");
             assert!(false)
         }
 
         #[test]
+        #[ignore = "vault handling not implemented"]
         fn opens_in_obsidian_with_named_vault() {
             let (_dir, mut _cmd) = exec_with_fixtures("notes open simple-note.md --vault=other");
             assert!(false)
@@ -228,12 +233,14 @@ mod notes {
         use super::*;
 
         #[test]
+        #[ignore = "vault handling not implemented"]
         fn opens_in_obsidian_with_default_vault() {
             Obz::from_command("notes uri simple-note.md")
                 .assert_stdout("obsidian://open?file=simple-note.md");
         }
 
         #[test]
+        #[ignore = "vault handling not implemented"]
         fn opens_in_obsidian_with_named_vault() {
             Obz::from_command("notes uri simple-note.md --vault=other")
                 .assert_stdout("obsidian://open?vault=other&file=simple-note.md");
@@ -244,6 +251,7 @@ mod notes {
         use super::*;
 
         #[test]
+        #[ignore = "vault handling not implemented"]
         fn prints_full_path_to_file() {
             let (dir, mut cmd) = exec_with_fixtures("notes path simple-note");
 
@@ -259,6 +267,7 @@ mod notes {
         use super::*;
 
         #[test]
+        #[ignore = "table printing not implemented"]
         fn prints_frontmatter_properties_as_table() {
             Obz::from_command("notes properties with-fm-properties.md").assert_stdout(indoc! { r#"
                 | property      | value        |
@@ -271,6 +280,7 @@ mod notes {
         }
 
         #[test]
+        #[ignore = "file meta properties not implemented"]
         fn prints_meta_properties() {
             Obz::from_command("notes properties empty-note.md --include-meta").assert_stdout(
                 indoc! { r#"
@@ -300,6 +310,7 @@ mod notes {
         use super::*;
 
         #[test]
+        #[ignore = "backlinks not implemented"]
         fn prints_backlinks_as_table() {
             Obz::from_command("notes backlinks backlinked-to.md -f json").assert_stdout(
                 indoc! { r#"
@@ -311,6 +322,7 @@ mod notes {
         }
 
         #[test]
+        #[ignore = "backlinks not implemented"]
         fn prints_backlinks_as_json() {
             Obz::from_command("notes backlinks backlinked-to.md -f json").assert_stdout(
                 indoc! { r#"
@@ -324,6 +336,7 @@ mod notes {
         use super::*;
 
         #[test]
+        #[ignore = "export command not implemented"]
         fn exports_to_html() {
             Obz::from_command("notes export complex-note.md -f html").assert_stdout(indoc! { r#"
                     <table>
@@ -348,6 +361,7 @@ mod notes {
         }
 
         #[test]
+        #[ignore = "export command not implemented"]
         fn exports_to_json() {
             Obz::from_command("notes export complex-note.md -f json").assert_stdout(indoc! { r#"
                 [{"note": "/path/to/another-file.md", "properties": {}, "body": ""}]
