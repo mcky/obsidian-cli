@@ -294,15 +294,15 @@ mod notes {
 
         #[test]
         fn prints_properties_as_json() {
-            Obz::from_command("notes properties with-fm-properties.md -f json").assert_stdout(
-                json!({
-                    "test-number": 100,
-                    "test-str": "a string val",
-                    "test-checkbox": true,
-                    "test-list": ["One","Two"]
-                })
-                .to_string(),
-            );
+            let stdout_match = &json!({
+                "test-number": 100,
+                "test-str": "a string val",
+                "test-checkbox": true,
+                "test-list": ["One","Two"]
+            });
+
+            Obz::from_command("notes properties with-fm-properties.md -f json")
+                .assert_stdout(format!("{stdout_match}\n"));
         }
     }
 
