@@ -45,7 +45,7 @@ mod notes {
         #[test]
         fn fails_for_missing_files() {
             Obz::from_command("notes view does-not-exist.md")
-                .assert_stderr("Could not read note `does-not-exist.md`");
+                .assert_stderr("Could not read note `does-not-exist.md`\n");
         }
     }
 
@@ -136,7 +136,7 @@ mod notes {
         fn prints_on_editor_fail() {
             let cmd = Obz::from_command("notes edit simple-note.md").with_editor(r#"exit 1"#);
 
-            cmd.assert_stderr("Editor exited with non-0 exit code");
+            cmd.assert_stderr("Editor exited with non-0 exit code\n");
         }
 
         // These tests jump through some extra hoops to simulate a tty in order

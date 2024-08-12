@@ -51,15 +51,16 @@ impl Obz {
         self
     }
 
-    pub fn assert_content<P>(mut self, file_path: P, file_content: &str) -> Self
+    pub fn assert_content<P, S>(mut self, file_path: P, file_content: S) -> Self
     where
         P: AsRef<Path>,
+        S: Into<String>,
     {
         self.cmd.assert().success();
         self.temp_dir
             .child(file_path)
             .assert(predicate::path::exists())
-            .assert(predicates::str::contains(file_content.trim()));
+            .assert(predicate::str::diff(file_content.into()));
 
         self
     }
@@ -76,7 +77,7 @@ impl Obz {
         self.cmd
             .assert()
             .success()
-            .stdout(predicates::str::contains(stdout_match));
+            .stdout(predicate::str::diff(stdout_match.into()));
         self
     }
 
@@ -87,7 +88,7 @@ impl Obz {
         self.cmd
             .assert()
             .failure()
-            .stderr(predicates::str::contains(stderr_match));
+            .stderr(predicate::str::diff(stderr_match.into()));
         self
     }
 }
