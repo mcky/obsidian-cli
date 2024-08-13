@@ -12,20 +12,17 @@ pub fn read_note(file_path: &PathBuf) -> anyhow::Result<ObsidianNote> {
     Ok(note)
 }
 
-fn extract_frontmatter(content: &str) -> (Option<String>, String) {
+fn extract_frontmatter(content: &str) -> (Option<String>, Option<String>) {
     let delimiter = "---";
     let mut parts = content.splitn(3, delimiter);
 
     match (parts.next(), parts.next(), parts.next()) {
         (Some(""), Some(frontmatter), Some(body)) => (
             Some(frontmatter.trim().to_string()),
-            body.trim().to_string(),
+            Some(body.trim().to_string()),
         ),
-        (Some(""), Some(frontmatter), None) => {
-            (Some(frontmatter.trim().to_string()), "".to_string())
-        }
-        (Some(body), None, None) => (None, body.trim().to_string()),
-        _ => panic!("Failed to parse frontmatter"),
+        (Some(""), Some(frontmatter), None) => (Some(frontmatter.trim().to_string()), None),
+        _ => (None, Some(content.trim().to_string())),
     }
 }
 
@@ -45,7 +42,7 @@ pub fn parse_note(file_path: &PathBuf, file_contents: String) -> anyhow::Result<
 
     let note = ObsidianNote {
         file_path: file_path.to_path_buf(),
-        file_body: file_body,
+        file_body: file_body.unwrap_or("".to_string()),
         file_contents: file_contents,
         properties: frontmatter,
     };
@@ -132,6 +129,20 @@ mod tests {
             ---
             ---
             The note content
+        "#};
+
+        let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
+        assert_eq!(note.properties, None);
+    }
+
+    #[test]
+    fn parse_note_handles_tables() {
+        // Markdown tables also contain `---`
+        let note_content = indoc! {r#"
+            | Col1      | Col2      |
+            |-----------|-----------|
+            | Row1 Col1 | Row1 Col2 |
+            | Row2 Col1 | Row2 Col2 |
         "#};
 
         let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
