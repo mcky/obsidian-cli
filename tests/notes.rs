@@ -54,11 +54,37 @@ mod notes {
         use super::*;
 
         #[test]
-        #[ignore = "render command not implemented"]
         fn pretty_prints_note() {
-            Obz::from_command("notes view simple-note.md").assert_stdout(indoc! {
+            Obz::from_command("notes render complex-note.md").assert_stdout(indoc! {r#"
+                ┄Rich note
+
+                This is the contents of complex-note.md
+
+                It contains a list
+            
+                • item 1
+                • item 2
+                • item 3
+
+                An outbound link, and a [[simple-note |backlink]]
+            "#});
+        }
+
+        #[test]
+        fn renders_without_frontmatter() {
+            Obz::from_command("notes render with-fm-properties.md").assert_stdout(indoc! {
             r#"
-                Simple note pretty printed
+                The main content of the file
+
+            "#
+            });
+        }
+
+        #[test]
+        #[ignore = "backlink rewriting not implemented"]
+        fn backlinks_replaced_with_clickable() {
+            Obz::from_command("notes render link-types.md").assert_stdout(indoc! {
+            r#"
             "#
             });
         }
