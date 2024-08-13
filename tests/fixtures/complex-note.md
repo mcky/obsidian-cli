@@ -11,4 +11,4 @@ It contains a list
 - item 2
 - item 3
 
-An [outbound link](https://example.com), and a [[simple-note |backlink]]
+An [outbound link](https://example.com), and a [[simple-note |link to a note]]

@@ -88,7 +88,7 @@ mod notes {
         }
 
         #[test]
-        #[ignore = "backlink rewriting not implemented"]
+        #[ignore = "wikilink rewriting not implemented"]
         fn backlinks_replaced_with_clickable() {
             Obz::from_command("notes render link-types.md").assert_stdout(indoc! {
             r#"
