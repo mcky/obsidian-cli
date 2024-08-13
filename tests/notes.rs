@@ -300,16 +300,19 @@ mod notes {
         use super::*;
 
         #[test]
-        #[ignore = "table printing not implemented"]
         fn prints_frontmatter_properties_as_table() {
             Obz::from_command("notes properties with-fm-properties.md").assert_stdout(indoc! { r#"
-                | property      | value        |
-                |---------------|--------------|
-                | test-number   | 100          |
-                | test-str      | a string val |
-                | test-checkbox | true         |
-                | test-list     | One, Two     |
-                "# });
+
+                ┌───────────────┬──────────────┐
+                │ Property      │ Value        │
+                ├───────────────┼──────────────┤
+                │ test-checkbox │ true         │
+                │ test-list     │ One, Two     │
+                │ test-number   │ 100          │
+                │ test-str      │ a string val │
+                └───────────────┴──────────────┘
+
+            "# });
         }
 
         #[test]

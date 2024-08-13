@@ -1,12 +1,12 @@
+use crate::{
+    formats::{yaml_to_json_value, yaml_to_string_map},
+    util::{read_note, resolve_note_path},
+};
 use anyhow::Context;
 use clap::{Args, Subcommand};
 use dialoguer::Confirm;
 use std::{env, fs, path::PathBuf, process};
-
-use crate::{
-    formats::yaml_to_json_value,
-    util::{read_note, resolve_note_path},
-};
+use tabled::{builder::Builder, settings::Style};
 
 #[derive(Args, Debug, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -290,7 +290,27 @@ fn properties(note: &str, format: &ExportFormatOption) -> ObxResult {
                 .unwrap_or_else(|| serde_json::Value::Object(serde_json::Map::new()));
             serde_json::to_string(&json_value)?
         }
-        ExportFormatOption::Pretty => todo!(),
+        ExportFormatOption::Pretty => {
+            let Some(serde_yaml::Value::Mapping(p)) = note.properties else {
+                panic!("Expected note.properties to be yaml::Value::mapping")
+            };
+
+            let mut property_strings = yaml_to_string_map(&p)
+                .into_iter()
+                .map(|(k, v)| vec![k, v])
+                .collect::<Vec<Vec<String>>>();
+
+            property_strings.sort();
+            let sorted_properties = property_strings.iter();
+
+            let mut builder = Builder::from_iter(sorted_properties);
+            builder.insert_record(0, vec!["Property", "Value"]);
+
+            let mut table = builder.build();
+            table.with(Style::sharp());
+
+            format!("\n{table}\n")
+        }
         ExportFormatOption::Html => todo!(),
     };
 

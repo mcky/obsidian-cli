@@ -1,5 +1,9 @@
-use serde_json::Value as JsonValue;
+use std::collections::HashMap;
+
+use serde_json::{map, Value as JsonValue};
 use serde_yaml::Value as YamlValue;
+
+use crate::obsidian_note::Properties;
 
 pub fn yaml_to_json_value(yaml: &YamlValue) -> JsonValue {
     match yaml {
@@ -31,4 +35,32 @@ pub fn yaml_to_json_value(yaml: &YamlValue) -> JsonValue {
         }
         YamlValue::Tagged(_) => todo!(),
     }
+}
+
+pub fn yaml_to_string_map(yaml_mapping: &serde_yaml::Mapping) -> HashMap<String, String> {
+    let mut mapping: HashMap<String, String> = HashMap::new();
+
+    for (k, v) in yaml_mapping {
+        let key: String = match k {
+            serde_yaml::Value::String(s) => s.clone(),
+            _ => panic!("YAML frontmatter key should be a string"),
+        };
+
+        let value: String = match v {
+            serde_yaml::Value::String(v) => v.clone(),
+            serde_yaml::Value::Number(v) => v.to_string(),
+            serde_yaml::Value::Bool(v) => v.to_string(),
+            serde_yaml::Value::Sequence(v) => v
+                .iter()
+                .map(|x| x.as_str().unwrap_or("default").to_string())
+                .collect::<Vec<String>>()
+                .join(", "),
+
+            _ => v.as_str().unwrap_or_default().to_string(),
+        };
+
+        mapping.insert(key, value);
+    }
+
+    mapping
 }
