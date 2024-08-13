@@ -280,17 +280,15 @@ fn render(_note: &str) -> ObxResult {
 
 fn properties(note: &str, format: &ExportFormatOption) -> ObxResult {
     let note_path = resolve_note_path(note)?;
-
     let note = read_note(&note_path).with_context(|| "could not parse note")?;
-
-    let Some(properties) = note.properties else {
-        return Ok(None);
-    };
 
     let formatted = match format {
         ExportFormatOption::Json => {
-            let as_json_value = yaml_to_json_value(&properties);
-            serde_json::to_string(&as_json_value)?
+            let json_value = note
+                .properties
+                .map(|yaml| yaml_to_json_value(&yaml))
+                .unwrap_or_else(|| serde_json::Value::Object(serde_json::Map::new()));
+            serde_json::to_string(&json_value)?
         }
         ExportFormatOption::Pretty => todo!(),
         ExportFormatOption::Html => todo!(),

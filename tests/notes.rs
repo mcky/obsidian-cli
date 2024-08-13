@@ -304,6 +304,11 @@ mod notes {
             Obz::from_command("notes properties with-fm-properties.md -f json")
                 .assert_stdout(format!("{stdout_match}\n"));
         }
+
+        #[test]
+        fn handles_missing_frontmatter_as_json() {
+            Obz::from_command("notes properties simple-note.md -f json").assert_stdout("{}\n");
+        }
     }
 
     mod backlinks {
