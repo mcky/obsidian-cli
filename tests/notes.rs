@@ -57,24 +57,31 @@ mod notes {
         fn pretty_prints_note() {
             Obz::from_command("notes render complex-note.md").assert_stdout(indoc! {r#"
                 ┄Rich note
-
+                
                 This is the contents of complex-note.md
 
                 It contains a list
-            
+
                 • item 1
                 • item 2
                 • item 3
 
                 An outbound link, and a [[simple-note |backlink]]
             "#});
+
+            Obz::from_command("notes render table.md").assert_stdout(indoc! {r#"
+                | Command         | Description                      |
+                |-----------------|----------------------------------|
+                | note view       | Print the raw markdown of a note |
+                | note render     | Pretty-print a notes markdown    |
+                | note properties | Print a notes properties         |
+            "#});
         }
 
         #[test]
         fn renders_without_frontmatter() {
             Obz::from_command("notes render with-fm-properties.md").assert_stdout(indoc! {
-            r#"
-                The main content of the file
+            r#"The main content of the file
 
             "#
             });
