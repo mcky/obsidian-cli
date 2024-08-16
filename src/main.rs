@@ -2,6 +2,7 @@ use std::process::exit;
 
 use clap::{Parser, Subcommand};
 
+pub mod cli_config;
 pub mod commands;
 pub mod formats;
 pub mod obsidian_note;

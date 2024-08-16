@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Context};
 use clap::{Args, Subcommand};
-use config::Config;
-use serde::{Deserialize, Serialize};
-use std::{env, fs, io, path::PathBuf};
+use std::{fs, io, path::PathBuf};
 use tabled::{builder::Builder, settings::Style};
+
+use crate::cli_config;
 
 #[derive(Args, Debug, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -73,49 +73,6 @@ pub fn entry(cmd: &VaultsCommand) -> anyhow::Result<Option<String>> {
 
 type ObxResult = anyhow::Result<Option<String>>;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct ConfigFileVault {
-    name: String,
-    path: PathBuf,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ConfigFile {
-    current_vault: String,
-    vaults: Vec<ConfigFileVault>,
-}
-
-static DEFAULT_CONFIG_PATH: &str = "SHOULD_ERROR.yml";
-
-fn get_config_path() -> String {
-    env::var("OBZ_CONFIG").unwrap_or(DEFAULT_CONFIG_PATH.to_string())
-}
-
-fn get_config() -> anyhow::Result<Config> {
-    let config_path = get_config_path();
-
-    let settings = Config::builder()
-        .add_source(config::File::with_name(&config_path))
-        .build()?;
-
-    Ok(settings)
-}
-
-fn read_config() -> anyhow::Result<ConfigFile> {
-    let config = get_config()?
-        .try_deserialize::<ConfigFile>()
-        .context("failed to deserialize config")?;
-    Ok(config)
-}
-
-fn write_config(new_config: ConfigFile) -> anyhow::Result<()> {
-    let config_path = get_config_path();
-    let serialized = serde_yaml::to_string(&new_config)?;
-
-    fs::write(config_path, serialized)
-        .with_context(|| "failed to write to config file {config_path}")
-}
-
 fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> ObxResult {
     let vault_name = vault_name_override.unwrap_or_else(|| {
         vault_path
@@ -146,20 +103,20 @@ fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> ObxResul
         ));
     }
 
-    let mut cfg = read_config()?;
+    let mut cfg = cli_config::read()?;
 
-    cfg.vaults.push(ConfigFileVault {
+    cfg.vaults.push(cli_config::ConfigFileVault {
         name: vault_name.clone(),
         path: resolved_path.to_path_buf(),
     });
 
-    let _ = write_config(cfg);
+    let _ = cli_config::write(cfg);
 
     Ok(Some(format!("Created vault {vault_name}")))
 }
 
 fn list(list_format: &ListFormats) -> ObxResult {
-    let config = read_config()?;
+    let config = cli_config::read()?;
 
     let formatted = match list_format {
         &ListFormats::Json => {
@@ -185,7 +142,7 @@ fn list(list_format: &ListFormats) -> ObxResult {
 }
 
 fn switch(vault_name: &str) -> ObxResult {
-    let config = read_config()?;
+    let config = cli_config::read()?;
 
     let found_vault = config
         .vaults
@@ -197,16 +154,16 @@ fn switch(vault_name: &str) -> ObxResult {
 
     dbg!(found_vault);
 
-    let mut cfg = read_config()?;
+    let mut cfg = cli_config::read()?;
     cfg.current_vault = vault_name.to_string();
 
-    let _ = write_config(cfg);
+    let _ = cli_config::write(cfg);
 
     Ok(Some(format!("Switched to {vault_name}")))
 }
 
 fn current() -> ObxResult {
-    let config = read_config()?;
+    let config = cli_config::read()?;
 
     let found_vault = config
         .vaults

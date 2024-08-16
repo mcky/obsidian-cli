@@ -2,17 +2,14 @@ use assert_cmd::Command;
 use assert_fs::fixture::ChildPath;
 use assert_fs::prelude::*;
 use assert_fs::TempDir;
-use core::fmt;
 use indoc::indoc;
 use predicates::prelude::*;
 use std::fs;
 use std::path::Path;
-use std::path::PathBuf;
 
 pub struct Obz {
     pub cmd: assert_cmd::Command,
     pub temp_dir: TempDir,
-    pub config_path: ChildPath,
 }
 
 impl Obz {
@@ -44,13 +41,9 @@ impl Obz {
 
         cmd.env("OBZ_CONFIG", config_path.display().to_string());
 
-        Obz {
-            cmd,
-            temp_dir,
-            config_path,
-        }
-        .with_editor("")
-        .with_config_file(&*&initial_cfg_file)
+        Obz { cmd, temp_dir }
+            .with_editor("")
+            .with_config_file(&*&initial_cfg_file)
     }
 
     pub fn with_config_file(self, cfg_file: &str) -> Self {
