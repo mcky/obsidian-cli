@@ -152,8 +152,6 @@ fn switch(vault_name: &str) -> ObxResult {
             format!("Could not switch to vault `{vault_name}`, vault doesn't exist")
         })?;
 
-    dbg!(found_vault);
-
     let mut cfg = cli_config::read()?;
     cfg.current_vault = vault_name.to_string();
 
