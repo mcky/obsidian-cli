@@ -3,16 +3,16 @@ use config::Config;
 use serde::{Deserialize, Serialize};
 use std::{env, fs, path::PathBuf};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ConfigFileVault {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Vault {
     pub name: String,
     pub path: PathBuf,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ConfigFile {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct File {
     pub current_vault: String,
-    pub vaults: Vec<ConfigFileVault>,
+    pub vaults: Vec<Vault>,
 }
 
 static DEFAULT_CONFIG_PATH: &str = "SHOULD_ERROR.yml";
@@ -31,14 +31,14 @@ fn get_config() -> anyhow::Result<Config> {
     Ok(settings)
 }
 
-pub fn read() -> anyhow::Result<ConfigFile> {
+pub fn read() -> anyhow::Result<File> {
     let config = get_config()?
-        .try_deserialize::<ConfigFile>()
+        .try_deserialize::<File>()
         .context("failed to deserialize config")?;
     Ok(config)
 }
 
-pub fn write(new_config: ConfigFile) -> anyhow::Result<()> {
+pub fn write(new_config: File) -> anyhow::Result<()> {
     let config_path = get_config_path();
     let serialized = serde_yaml::to_string(&new_config)?;
 

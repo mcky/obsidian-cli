@@ -1,6 +1,7 @@
 use crate::{
+    cli_config,
     formats::{yaml_to_json_value, yaml_to_string_map},
-    util::{read_note, resolve_note_path},
+    util::{get_current_vault, read_note, resolve_note_path},
 };
 use anyhow::Context;
 use clap::{Args, Subcommand};
@@ -143,101 +144,159 @@ struct BacklinksArgs {
 
 pub fn entry(cmd: &NotesCommand) -> anyhow::Result<Option<String>> {
     match &cmd.command {
-        Some(Subcommands::View(ViewArgs { common })) => view(&common.note),
-        Some(Subcommands::Uri(UriArgs { common })) => uri(&common.note, &common.vault),
-        Some(Subcommands::Open(OpenArgs { common })) => open(&common.note, &common.vault),
-        Some(Subcommands::Create(CreateArgs { common })) => create(&common.note),
+        Some(Subcommands::View(ViewArgs { common })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            view(args)
+        }
+        Some(Subcommands::Uri(UriArgs { common })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            uri(args)
+        }
+        Some(Subcommands::Open(OpenArgs { common })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            open(args)
+        }
+        Some(Subcommands::Create(CreateArgs { common })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            create(args)
+        }
         Some(Subcommands::Edit(EditArgs {
             common,
             create: should_create,
-        })) => edit(&common.note, should_create),
-        Some(Subcommands::Path(PathArgs { common })) => path(&common.note),
-        Some(Subcommands::Render(RenderArgs { common })) => render(&common.note),
-        Some(Subcommands::Properties(PropertiesArgs { common, format, .. })) => {
-            properties(&common.note, format)
+        })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            edit(args, should_create)
         }
-        Some(Subcommands::Export(ExportArgs { common, .. })) => export(&common.note),
-        Some(Subcommands::Backlinks(BacklinksArgs { common, .. })) => backlinks(&common.note),
+        Some(Subcommands::Path(PathArgs { common })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            path(args)
+        }
+        Some(Subcommands::Render(RenderArgs { common })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            render(args)
+        }
+        Some(Subcommands::Properties(PropertiesArgs { common, format, .. })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            properties(args, format)
+        }
+        Some(Subcommands::Export(ExportArgs { common, .. })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            export(args)
+        }
+        Some(Subcommands::Backlinks(BacklinksArgs { common, .. })) => {
+            let args = EnrichedNoteArgs::from_args(common)?;
+            backlinks(args)
+        }
         None => todo!(),
+    }
+}
+
+struct EnrichedNoteArgs {
+    vault: cli_config::Vault,
+    note_path: PathBuf,
+    note_file: String,
+}
+
+impl EnrichedNoteArgs {
+    fn from_args(args: &NoteArgs) -> anyhow::Result<EnrichedNoteArgs> {
+        let vault_name = &args.vault;
+        let vault = get_current_vault(vault_name.clone())?;
+
+        let note_path = resolve_note_path(&args.note, &vault.path)?;
+        let note_file = note_path
+            .file_name()
+            .expect("note_path should be a file")
+            .to_str()
+            .unwrap()
+            .to_owned();
+
+        Ok(EnrichedNoteArgs {
+            vault,
+            note_path,
+            note_file,
+        })
     }
 }
 
 type ObxResult = anyhow::Result<Option<String>>;
 
-fn view(note: &str) -> ObxResult {
-    let note_path = resolve_note_path(note)?;
-
-    let note_content = fs::read_to_string(note_path.clone())
-        .with_context(|| format!("Could not read note `{}`", note_path.display()))?;
+fn view(note: EnrichedNoteArgs) -> ObxResult {
+    let note_content = fs::read_to_string(note.note_path.clone())
+        .with_context(|| format!("Could not read note `{}`", note.note_file))?;
 
     Ok(Some(note_content))
 }
 
-fn obsidian_note_uri(note_path: &PathBuf, vault: &Option<String>) -> String {
-    let uri: String;
-
-    if let Some(vault) = vault {
-        uri = format!(
-            "obsidian://open?vault={vault}&file={file}",
-            file = note_path.display()
-        );
-    } else {
-        uri = format!("obsidian://open?file={file}", file = note_path.display());
-    }
-
-    uri
+fn obsidian_note_uri(note_path: &PathBuf, vault: String) -> String {
+    format!(
+        "obsidian://open?vault={vault}&file={file}",
+        file = note_path.display()
+    )
 }
 
-fn open(note: &str, vault: &Option<String>) -> ObxResult {
-    let note_path = resolve_note_path(note)?;
-    let uri = obsidian_note_uri(&note_path, vault);
+fn open(note: EnrichedNoteArgs) -> ObxResult {
+    let uri = obsidian_note_uri(&note.note_path, note.vault.name);
 
     open::that(&uri).with_context(|| format!("Could not open obsidian url `{uri}`"))?;
 
     Ok(None)
 }
 
-fn uri(note: &str, vault: &Option<String>) -> ObxResult {
-    let note_path = resolve_note_path(note)?;
-    let uri = obsidian_note_uri(&note_path, vault);
+fn uri(note: EnrichedNoteArgs) -> ObxResult {
+    let uri = obsidian_note_uri(&note.note_path, note.vault.name);
 
     Ok(Some(uri))
 }
 
-fn create(note: &str) -> ObxResult {
-    let note_path = resolve_note_path(note)?;
+fn create_note(note: &EnrichedNoteArgs, note_contents: &str) -> anyhow::Result<()> {
+    // Ensure the directory exists for a provided note
+    // before we try to write to it
+    let note_dir = &note
+        .note_path
+        .parent()
+        .expect("note_path should have a parent");
 
+    fs::create_dir_all(note_dir)
+        .with_context(|| format!("Could not create directory {}", note_dir.display()))?;
+
+    fs::write(&note.note_path, &note_contents)
+        .with_context(|| format!("Could not create note {}", note.note_path.display()))?;
+
+    Ok(())
+}
+
+fn create(note: EnrichedNoteArgs) -> ObxResult {
     let note_contents = "";
-    fs::write(&note_path, &note_contents)
-        .with_context(|| format!("Could not create note {}", note_path.display()))?;
+    create_note(&note, &note_contents)?;
 
     let editor = env::var("EDITOR").context("$EDITOR not found")?;
 
     let editor_status = process::Command::new(&editor)
-        .arg(&note_path)
+        .arg(&note.note_path)
         .status()
         .with_context(|| format!("failed to execute $EDITOR={editor}"))?;
 
     if editor_status.success() {
         // @TODO: this isn't strictly true, discarding changes with :q!
         // in vim will still show this message
-        Ok(Some(format!("Created note {}", &note_path.display())))
+        Ok(Some(format!("Created note {}", &note.note_path.display())))
     } else {
         Err(anyhow::Error::msg("Editor exited with non-0 exit code"))
     }
 }
 
-fn edit(note: &str, create_flag: &bool) -> ObxResult {
-    let note_path = resolve_note_path(&note)?;
-
-    let note_exists = note_path.exists();
+fn edit(note: EnrichedNoteArgs, create_flag: &bool) -> ObxResult {
+    let note_exists = note.note_path.exists();
     let term_is_attended = console::user_attended();
 
     if !note_exists {
         let mut confirmation = false;
 
         if term_is_attended && !create_flag {
-            let prompt = format!("The note {note} does not exist, would you like to create it?");
+            let prompt = format!(
+                "The note {} does not exist, would you like to create it?",
+                note.note_file
+            );
 
             confirmation = Confirm::new()
                 .with_prompt(prompt)
@@ -246,9 +305,8 @@ fn edit(note: &str, create_flag: &bool) -> ObxResult {
         }
 
         if confirmation || *create_flag {
-            fs::File::create(&note_path).with_context(|| {
-                format!("failed to create new note at {}", &note_path.display())
-            })?;
+            let note_contents = "";
+            create_note(&note, &note_contents)?;
         } else {
             return Ok(Some("Aborted".to_string()));
         }
@@ -257,30 +315,29 @@ fn edit(note: &str, create_flag: &bool) -> ObxResult {
     let editor = env::var("EDITOR").context("$EDITOR not found")?;
 
     let editor_status = process::Command::new(&editor)
-        .arg(&note_path)
+        .arg(&note.note_path)
         .status()
         .with_context(|| format!("failed to execute $EDITOR={editor}"))?;
 
     if editor_status.success() {
         // @TODO: this isn't strictly true, discarding changes with :q!
         // in vim will still show this message
-        Ok(Some(format!("Saved changes to {}", &note_path.display())))
+        Ok(Some(format!("Saved changes to {}", &note.note_file)))
     } else {
         Err(anyhow::Error::msg("Editor exited with non-0 exit code"))
     }
 }
 
-fn path(_note: &str) -> ObxResult {
+fn path(_note: EnrichedNoteArgs) -> ObxResult {
     todo!()
 }
 
-fn render(_note: &str) -> ObxResult {
+fn render(_note: EnrichedNoteArgs) -> ObxResult {
     todo!()
 }
 
-fn properties(note: &str, format: &ExportFormatOption) -> ObxResult {
-    let note_path = resolve_note_path(note)?;
-    let note = read_note(&note_path).with_context(|| "could not parse note")?;
+fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> ObxResult {
+    let note = read_note(&note.note_path).with_context(|| "could not parse note")?;
 
     let formatted = match format {
         ExportFormatOption::Json => {
@@ -317,10 +374,10 @@ fn properties(note: &str, format: &ExportFormatOption) -> ObxResult {
     Ok(Some(formatted))
 }
 
-fn export(_note: &str) -> ObxResult {
+fn export(_note: EnrichedNoteArgs) -> ObxResult {
     todo!()
 }
 
-fn backlinks(_note: &str) -> ObxResult {
+fn backlinks(_note: EnrichedNoteArgs) -> ObxResult {
     todo!()
 }

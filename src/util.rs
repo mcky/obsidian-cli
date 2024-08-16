@@ -4,7 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::obsidian_note::{ObsidianNote, Properties};
+use anyhow::Context;
+
+use crate::{
+    cli_config,
+    obsidian_note::{ObsidianNote, Properties},
+};
 
 pub fn read_note(file_path: &PathBuf) -> anyhow::Result<ObsidianNote> {
     let file_contents = fs::read_to_string(&file_path)?;
@@ -50,16 +55,32 @@ pub fn parse_note(file_path: &PathBuf, file_contents: String) -> anyhow::Result<
     Ok(note)
 }
 
-pub fn resolve_note_path(path_or_string: &str) -> anyhow::Result<PathBuf> {
+pub fn resolve_note_path(path_or_string: &str, vault_path: &PathBuf) -> anyhow::Result<PathBuf> {
     let file_path = Path::new(path_or_string);
 
-    let content_type: PathBuf = match file_path.extension().and_then(OsStr::to_str) {
+    let path_with_ext: PathBuf = match file_path.extension().and_then(OsStr::to_str) {
         Some("md") => file_path.to_path_buf().to_owned(),
         Some(_) => file_path.to_owned(),
         None => file_path.with_extension("md"),
     };
 
-    return Ok(content_type);
+    let note_path = vault_path.join(path_with_ext);
+
+    return Ok(note_path);
+}
+
+pub fn get_current_vault(vault_name_override: Option<String>) -> anyhow::Result<cli_config::Vault> {
+    let config = cli_config::read()?;
+    let vault_name = vault_name_override.unwrap_or(config.current_vault);
+
+    let found_vault: cli_config::Vault = config
+        .vaults
+        .iter()
+        .find(|v| v.name == vault_name)
+        .context("Expected to find the current vault in config")?
+        .clone();
+
+    Ok(found_vault)
 }
 
 #[cfg(test)]
@@ -72,14 +93,26 @@ mod tests {
     #[test_case("bar/foo", "bar/foo.md" ; "with path")]
     #[test_case("foo.txt", "foo.txt" ; "with another extension")]
     #[test_case("foo.md", "foo.md" ; "with markdown extension")]
-    fn note_path_resolves(input: &str, expected: &str) {
-        assert_eq!(resolve_note_path(input).unwrap(), PathBuf::from(expected))
+    fn resolve_note_path_returns_correct_extension(input: &str, expected: &str) {
+        assert_eq!(
+            resolve_note_path(input, &PathBuf::from("")).unwrap(),
+            PathBuf::from(expected)
+        )
+    }
+
+    #[test_case("foo.md", "/path/to/", "/path/to/foo.md")]
+    #[test_case("foo", "/path/to/", "/path/to/foo.md")]
+    fn resolve_note_path_joins_vault_dir(file: &str, vault: &str, expected: &str) {
+        assert_eq!(
+            resolve_note_path(file, &PathBuf::from(vault)).unwrap(),
+            PathBuf::from(expected)
+        )
     }
 
     #[test]
     #[ignore]
     fn note_path_errors_on_invalid() {
-        assert!(resolve_note_path(" ").is_err());
+        assert!(resolve_note_path(" ", &PathBuf::from("")).is_err());
     }
 
     #[test]

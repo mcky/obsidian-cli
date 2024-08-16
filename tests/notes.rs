@@ -104,25 +104,25 @@ mod notes {
 
         #[test]
         fn creates_new_note_file() {
-            Obz::from_command("notes create new-note.md").assert_created("new-note.md");
+            Obz::from_command("notes create new-note.md").assert_created("main-vault/new-note.md");
         }
 
         #[test]
         fn accepts_without_extension() {
-            Obz::from_command("notes create new-note").assert_created("new-note.md");
+            Obz::from_command("notes create new-note").assert_created("main-vault/new-note.md");
         }
 
         #[test]
-        fn accepts_paths() {
-            Obz::from_command("notes create folder/new-note.md")
-                .assert_created("folder/new-note.md");
+        fn creates_missing_paths() {
+            Obz::from_command("notes create some/nested/folder/new-note.md")
+                .assert_created("main-vault/some/nested/folder/new-note.md");
         }
 
         #[test]
         #[ignore = "vault handling not implemented"]
         fn allows_switching_vault() {
-            Obz::from_command("notes create in-another-vault --vault=other")
-                .assert_created("other-vault/in-another-vault.md");
+            Obz::from_command("notes create in-another-vault --vault=secondary")
+                .assert_created("another-path/in-another-vault.md");
         }
 
         #[test]
@@ -137,7 +137,7 @@ mod notes {
             let cmd = Obz::from_command("notes create new-note.md")
                 .with_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
 
-            let edit_file = &cmd.temp_dir.child("new-note.md");
+            let edit_file = &cmd.temp_dir.child("main-vault/new-note.md");
 
             let _ = &cmd.assert_success();
             edit_file.assert(predicate::str::contains("This was appended by $EDITOR"));
@@ -154,7 +154,7 @@ mod notes {
             let cmd = Obz::from_command("notes edit simple-note.md")
                 .with_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
 
-            let edit_file = &cmd.temp_dir.child("simple-note.md");
+            let edit_file = &cmd.temp_dir.child("main-vault/simple-note.md");
 
             let _ = &cmd.assert_success();
             edit_file.assert(predicate::str::contains("This was appended by $EDITOR"));
@@ -162,12 +162,10 @@ mod notes {
 
         #[test]
         fn prints_on_editor_missing() {
-            let (_dir, mut cmd) = exec_with_fixtures("notes edit simple-note.md");
+            let mut cmd = Obz::from_command("notes edit simple-note.md");
+            cmd.cmd.env_remove("EDITOR");
 
-            cmd.env_clear();
-            cmd.assert()
-                .failure()
-                .stderr(predicates::str::contains("$EDITOR not found"));
+            cmd.assert_stderr("$EDITOR not found\n");
         }
 
         #[test]
@@ -191,7 +189,7 @@ mod notes {
             let cmd = Obz::from_command("notes edit new-note.md")
                 .with_editor(r#"echo "This was appended by \$EDITOR" >> "$1""#);
 
-            let edit_file = &cmd.temp_dir.child("new-note.md");
+            let edit_file = &cmd.temp_dir.child("main-vault/new-note.md");
 
             // Take our usual cmd but instead of asserting on it, convert it into
             // a string, then split it into the `cd $dir` and `cmd $args` parts
@@ -220,7 +218,7 @@ mod notes {
         fn does_not_create_if_prompt_rejected() {
             let (dir, cmd) = exec_with_fixtures("notes edit new-note.md");
 
-            let edit_file = dir.child("new-note.md");
+            let edit_file = dir.child("main-vault/new-note.md");
 
             // Take our usual cmd but instead of asserting on it, convert it into
             // a string, then split it into the `cd $dir` and `cmd $args` parts

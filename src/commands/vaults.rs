@@ -105,7 +105,7 @@ fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> ObxResul
 
     let mut cfg = cli_config::read()?;
 
-    cfg.vaults.push(cli_config::ConfigFileVault {
+    cfg.vaults.push(cli_config::Vault {
         name: vault_name.clone(),
         path: resolved_path.to_path_buf(),
     });
