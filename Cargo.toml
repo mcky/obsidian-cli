@@ -8,8 +8,9 @@ name = "obz"
 path = "./src/main.rs"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = { version = "1.0.86", features = ["backtrace"] }
 clap = { version = "4.0", features = ["derive"] }
+config = { version = "0.14.0", features = ["yaml"] }
 console = "0.15.8"
 dialoguer = "0.11.0"
 open = "5.3.0"

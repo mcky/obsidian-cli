@@ -1,9 +1,6 @@
-use std::collections::HashMap;
-
-use serde_json::{map, Value as JsonValue};
+use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
-
-use crate::obsidian_note::Properties;
+use std::collections::HashMap;
 
 pub fn yaml_to_json_value(yaml: &YamlValue) -> JsonValue {
     match yaml {

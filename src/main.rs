@@ -16,6 +16,8 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Notes(commands::notes::NotesCommand),
+
+    Vaults(commands::vaults::VaultsCommand),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -23,6 +25,7 @@ fn main() -> anyhow::Result<()> {
 
     let res = match &cli.command {
         Some(Commands::Notes(args)) => commands::notes::entry(args),
+        Some(Commands::Vaults(args)) => commands::vaults::entry(args),
         None => {
             todo!("Needs a sub-command");
         }
