@@ -114,8 +114,8 @@ mod vaults {
 
         #[test]
         fn prints_success_message() {
-            Obz::from_command("vaults switch second-vault")
-                .assert_stdout("Switched to second-vault\n");
+            Obz::from_command("vaults switch secondary")
+                .assert_stdout("Switched to secondary\n");
         }
 
         #[test]
@@ -126,7 +126,7 @@ mod vaults {
 
         #[test]
         fn persists_changes() {
-            let switch_cmd = Obz::from_command("vaults switch second-vault");
+            let switch_cmd = Obz::from_command("vaults switch secondary");
 
             // Ensure curr_cmd is reading from the same temp_dir as switch_cmd, so we
             // pick up the persisted changes
@@ -137,7 +137,7 @@ mod vaults {
             // Keep a reference to the Obz instance so we don't drop the tmp dir
             let _x = switch_cmd.assert_success();
 
-            curr_cmd.assert_stdout_contains("second-vault");
+            curr_cmd.assert_stdout_contains("secondary");
         }
     }
 

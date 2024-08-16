@@ -33,7 +33,7 @@ impl Obz {
                 vaults:
                 - name: main
                   path: {dir}/main-vault/
-                - name: second-vault
+                - name: secondary
                   path: {dir}/another/path
                 "#},
             dir = temp_dir.display()
