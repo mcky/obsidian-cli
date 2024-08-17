@@ -3,7 +3,7 @@ use clap::{Args, Subcommand};
 use std::{fs, io, path::PathBuf};
 use tabled::{builder::Builder, settings::Style};
 
-use crate::cli_config;
+use crate::{cli_config, util::get_current_vault};
 
 #[derive(Args, Debug, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -26,6 +26,9 @@ enum Subcommands {
 
     /// Print the name and path of the current vault
     Current,
+
+    /// Print the absolute path to the current vault
+    Path,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -67,6 +70,7 @@ pub fn entry(cmd: &VaultsCommand) -> anyhow::Result<Option<String>> {
         Some(Subcommands::List(ListArgs { format })) => list(format),
         Some(Subcommands::Switch(SwitchArgs { vault })) => switch(&vault),
         Some(Subcommands::Current) => current(),
+        Some(Subcommands::Path) => path(),
         None => todo!(),
     }
 }
@@ -144,7 +148,7 @@ fn list(list_format: &ListFormats) -> ObxResult {
 fn switch(vault_name: &str) -> ObxResult {
     let config = cli_config::read()?;
 
-    let found_vault = config
+    config
         .vaults
         .iter()
         .find(|v| v.name == vault_name)
@@ -176,4 +180,11 @@ fn current() -> ObxResult {
     );
 
     Ok(Some(out))
+}
+
+fn path() -> ObxResult {
+    let vault = get_current_vault(None)?;
+    let vault_path = vault.path.to_str().unwrap().to_string();
+
+    Ok(Some(vault_path))
 }
