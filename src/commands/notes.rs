@@ -328,8 +328,9 @@ fn edit(note: EnrichedNoteArgs, create_flag: &bool) -> ObxResult {
     }
 }
 
-fn path(_note: EnrichedNoteArgs) -> ObxResult {
-    todo!()
+fn path(note: EnrichedNoteArgs) -> ObxResult {
+    let note_path = note.note_path.to_str().unwrap().to_string();
+    Ok(Some(note_path))
 }
 
 fn render(_note: EnrichedNoteArgs) -> ObxResult {
