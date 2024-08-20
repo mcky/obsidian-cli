@@ -144,9 +144,13 @@ impl Obz {
 pub fn create_fixtures() -> TempDir {
     let dir = TempDir::new().expect("failed to create new TempDir");
 
-    dir.child("./main-vault")
-        .copy_from("tests/fixtures", &["*.md"])
-        .unwrap();
+    let main_vault = dir.child("./main-vault");
+    main_vault.copy_from("tests/fixtures", &["*.md"]).unwrap();
+
+    let secondary_vault = dir.child("./another/path");
+    secondary_vault
+        .child("from-another-vault.md")
+        .write_str("This note is from the secondary vault").unwrap();
 
     dir
 }

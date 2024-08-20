@@ -24,9 +24,8 @@ mod notes {
     }
 
     #[test]
-    #[ignore = "vault handling not implemented"]
-    fn allows_switching_vault() {
-        Obz::from_command("notes view from-another-vault --vault=other").assert_success();
+    fn allows_specifying_vault() {
+        Obz::from_command("notes view from-another-vault --vault=secondary").assert_success();
     }
 
     mod view {
@@ -119,10 +118,9 @@ mod notes {
         }
 
         #[test]
-        #[ignore = "vault handling not implemented"]
-        fn allows_switching_vault() {
-            Obz::from_command("notes create in-another-vault --vault=secondary")
-                .assert_created("another-path/in-another-vault.md");
+        fn allows_specifying_vault() {
+            Obz::from_command("notes create created-in-another-vault --vault=secondary")
+                .assert_created("another/path/created-in-another-vault.md");
         }
 
         #[test]
@@ -199,7 +197,7 @@ mod notes {
                 panic!("couldn't split cmd_parts")
             };
 
-            let mut p = spawn_bash(Some(1_000)).unwrap();
+            let mut p = spawn_bash(Some(5_000)).unwrap();
 
             p.send_line(&cd_cmd).unwrap();
             p.send_line(&bin_cmd).unwrap();
@@ -216,19 +214,19 @@ mod notes {
 
         #[test]
         fn does_not_create_if_prompt_rejected() {
-            let (dir, cmd) = exec_with_fixtures("notes edit new-note.md");
+            let cmd = Obz::from_command("notes edit new-note.md");
 
-            let edit_file = dir.child("main-vault/new-note.md");
+            let edit_file = cmd.temp_dir.child("main-vault/new-note.md");
 
             // Take our usual cmd but instead of asserting on it, convert it into
             // a string, then split it into the `cd $dir` and `cmd $args` parts
-            let cmd_str = &format!("{:?}", process::Command::from(cmd));
+            let cmd_str = &format!("{:?}", process::Command::from(cmd.cmd));
             let cmd_parts = cmd_str.split(" && ").collect::<Vec<&str>>();
             let [cd_cmd, bin_cmd] = &cmd_parts[..] else {
                 panic!("couldn't split cmd_parts")
             };
 
-            let mut p = spawn_bash(Some(1_000)).unwrap();
+            let mut p = spawn_bash(Some(5_000)).unwrap();
 
             p.send_line(&cd_cmd).unwrap();
             p.send_line(&bin_cmd).unwrap();
@@ -245,20 +243,20 @@ mod notes {
     }
 
     mod open {
+        // These are wrappers around `notes uri`,
         use super::*;
 
         #[test]
-        #[ignore = "vault handling not implemented"]
-        fn opens_in_obsidian_with_default_vault() {
-            let (_dir, mut _cmd) = exec_with_fixtures("notes open simple-note.md");
-            assert!(false)
+        #[ignore = "this opens Obsidian.app on every test run"]
+        fn opens_in_obsidian_with_current_vault() {
+            Obz::from_command("notes open simple-note.md").assert_success();
         }
 
         #[test]
-        #[ignore = "vault handling not implemented"]
+        #[ignore = "this opens Obsidian.app on every test run"]
         fn opens_in_obsidian_with_named_vault() {
-            let (_dir, mut _cmd) = exec_with_fixtures("notes open simple-note.md --vault=other");
-            assert!(false)
+            Obz::from_command("notes open from-another-vault.md --vault=secondary")
+                .assert_success();
         }
     }
 
@@ -266,17 +264,25 @@ mod notes {
         use super::*;
 
         #[test]
-        #[ignore = "vault handling not implemented"]
-        fn opens_in_obsidian_with_default_vault() {
-            Obz::from_command("notes uri simple-note.md")
-                .assert_stdout("obsidian://open?file=simple-note.md");
+        fn prints_uri_with_current_vault() {
+            let cmd = Obz::from_command("notes uri simple-note.md");
+            let expected_path = cmd.temp_dir.child("main-vault/simple-note.md");
+            let expected_uri = format!(
+                "obsidian://open?vault=main&file={}\n",
+                expected_path.display()
+            );
+            cmd.assert_stdout(expected_uri);
         }
 
         #[test]
-        #[ignore = "vault handling not implemented"]
-        fn opens_in_obsidian_with_named_vault() {
-            Obz::from_command("notes uri simple-note.md --vault=other")
-                .assert_stdout("obsidian://open?vault=other&file=simple-note.md");
+        fn prints_uri_with_specified_vault() {
+            let cmd = Obz::from_command("notes uri from-another-vault.md --vault=secondary");
+            let expected_path = cmd.temp_dir.child("another/path/from-another-vault.md");
+            let expected_uri = format!(
+                "obsidian://open?vault=secondary&file={}\n",
+                expected_path.display()
+            );
+            cmd.assert_stdout(expected_uri);
         }
     }
 
@@ -284,15 +290,19 @@ mod notes {
         use super::*;
 
         #[test]
-        #[ignore = "vault handling not implemented"]
         fn prints_full_path_to_file() {
-            let (dir, mut cmd) = exec_with_fixtures("notes path simple-note");
+            let cmd = Obz::from_command("notes path simple-note");
+            let expected_path = cmd.temp_dir.child("main-vault/simple-note.md");
 
-            let expected_path = dir.join("/simple-note.md").to_str().unwrap().to_string();
+            cmd.assert_stdout(format!("{}\n", expected_path.display()));
+        }
 
-            cmd.assert()
-                .success()
-                .stdout(predicate::str::contains(&expected_path));
+        #[test]
+        fn allows_specifying_vault() {
+            let cmd = Obz::from_command("notes path from-another-vault --vault=secondary");
+            let expected_path = cmd.temp_dir.child("another/path/from-another-vault.md");
+
+            cmd.assert_stdout(format!("{}\n", expected_path.display()));
         }
     }
 
