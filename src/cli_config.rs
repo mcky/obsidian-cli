@@ -18,7 +18,7 @@ pub struct File {
 static DEFAULT_CONFIG_PATH: &str = "SHOULD_ERROR.yml";
 
 fn get_config_path() -> String {
-    env::var("OBZ_CONFIG").unwrap_or(DEFAULT_CONFIG_PATH.to_string())
+    env::var("OBX_CONFIG").unwrap_or(DEFAULT_CONFIG_PATH.to_string())
 }
 
 fn get_config() -> anyhow::Result<Config> {

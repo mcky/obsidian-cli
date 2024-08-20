@@ -713,7 +713,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "obz-cli"
+name = "obx-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",

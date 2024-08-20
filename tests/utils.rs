@@ -7,16 +7,16 @@ use predicates::prelude::*;
 use std::fs;
 use std::path::Path;
 
-pub struct Obz {
+pub struct Obx {
     pub cmd: assert_cmd::Command,
     pub temp_dir: TempDir,
 }
 
-impl Obz {
+impl Obx {
     pub fn from_command(command_str: &str) -> Self {
         let temp_dir = create_fixtures();
 
-        let mut cmd = Command::cargo_bin("obz").expect("failed to construct obz command");
+        let mut cmd = Command::cargo_bin("obx").expect("failed to construct obx command");
 
         cmd.current_dir(&temp_dir);
 
@@ -25,7 +25,7 @@ impl Obz {
             cmd.arg(arg);
         }
 
-        let config_path = temp_dir.child("./cfg/obz.yml");
+        let config_path = temp_dir.child("./cfg/obx.yml");
 
         let initial_cfg_file = format!(
             indoc! {
@@ -39,16 +39,16 @@ impl Obz {
             dir = temp_dir.display()
         );
 
-        cmd.env("OBZ_CONFIG", config_path.display().to_string());
+        cmd.env("OBX_CONFIG", config_path.display().to_string());
 
-        Obz { cmd, temp_dir }
+        Obx { cmd, temp_dir }
             .with_editor("")
             .with_config_file(&*&initial_cfg_file)
     }
 
     pub fn with_config_file(self, cfg_file: &str) -> Self {
         self.temp_dir
-            .child("./cfg/obz.yml")
+            .child("./cfg/obx.yml")
             .write_str(&cfg_file)
             .expect("should be able to write to config file");
 

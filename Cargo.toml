@@ -1,10 +1,10 @@
 [package]
-name = "obz-cli"
+name = "obx-cli"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "obz"
+name = "obx"
 path = "./src/main.rs"
 
 [dependencies]
