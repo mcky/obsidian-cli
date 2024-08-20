@@ -149,28 +149,6 @@ pub fn create_fixtures() -> TempDir {
     dir
 }
 
-pub fn exec_with_fixtures(s: &str) -> (TempDir, Command) {
-    let dir = create_fixtures();
-    let cmd = get_cmd(&dir, s);
-
-    (dir, cmd)
-}
-
-/// Allows constructing a command as an entire string, e.g. `get_cmd(&dir, "notes create foo")`
-/// instead of using the `.arg` builder pattern
-pub fn get_cmd(dir: &TempDir, command_str: &str) -> Command {
-    let mut cmd = Command::cargo_bin("obz").expect("failed to construct obz command");
-
-    cmd.current_dir(&dir);
-
-    let args = command_str.split(" ");
-    for arg in args {
-        cmd.arg(arg);
-    }
-
-    return cmd;
-}
-
 pub fn create_editor_script<S>(content: S, temp_dir: &TempDir) -> ChildPath
 where
     S: Into<String>,
