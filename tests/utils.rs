@@ -25,7 +25,7 @@ impl Obx {
             cmd.arg(arg);
         }
 
-        let config_path = temp_dir.child("./cfg/obx.yml");
+        let config_path = temp_dir.child("./config/obx/");
 
         let initial_cfg_file = format!(
             indoc! {
@@ -39,7 +39,7 @@ impl Obx {
             dir = temp_dir.display()
         );
 
-        cmd.env("OBX_CONFIG", config_path.display().to_string());
+        cmd.env("OBX_CONFIG_DIR", config_path.display().to_string());
 
         Obx { cmd, temp_dir }
             .with_editor("")
@@ -48,7 +48,7 @@ impl Obx {
 
     pub fn with_config_file(self, cfg_file: &str) -> Self {
         self.temp_dir
-            .child("./cfg/obx.yml")
+            .child("./config/obx/config.yml")
             .write_str(&cfg_file)
             .expect("should be able to write to config file");
 

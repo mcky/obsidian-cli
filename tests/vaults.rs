@@ -54,8 +54,8 @@ mod vaults {
             // Ensure list_cmd is reading from the same temp_dir as create_cmd, so we
             // pick up the persisted changes
             let mut list_cmd = Obx::from_command("vaults list");
-            let tmp_config_path = create_cmd.temp_dir.child("./cfg/obx.yml");
-            list_cmd.env("OBX_CONFIG", tmp_config_path.display().to_string());
+            let tmp_config_path = create_cmd.temp_dir.child("./config/obx/");
+            list_cmd.env("OBX_CONFIG_DIR", tmp_config_path.display().to_string());
 
             // Keep a reference to the Obx instance so we don't drop the tmp dir
             let _ = &create_cmd.assert_success();
@@ -114,8 +114,7 @@ mod vaults {
 
         #[test]
         fn prints_success_message() {
-            Obx::from_command("vaults switch secondary")
-                .assert_stdout("Switched to secondary\n");
+            Obx::from_command("vaults switch secondary").assert_stdout("Switched to secondary\n");
         }
 
         #[test]
@@ -131,8 +130,8 @@ mod vaults {
             // Ensure curr_cmd is reading from the same temp_dir as switch_cmd, so we
             // pick up the persisted changes
             let mut curr_cmd = Obx::from_command("vaults current");
-            let tmp_config_path = switch_cmd.temp_dir.child("./cfg/obx.yml");
-            curr_cmd.env("OBX_CONFIG", tmp_config_path.display().to_string());
+            let tmp_config_path = switch_cmd.temp_dir.child("./config/obx/");
+            curr_cmd.env("OBX_CONFIG_DIR", tmp_config_path.display().to_string());
 
             // Keep a reference to the Obx instance so we don't drop the tmp dir
             let _x = switch_cmd.assert_success();

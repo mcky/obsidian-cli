@@ -15,10 +15,18 @@ pub struct File {
     pub vaults: Vec<Vault>,
 }
 
-static DEFAULT_CONFIG_PATH: &str = "SHOULD_ERROR.yml";
+static DEFAULT_CONFIG_DIR: &str = "~/.config/obx-cli";
+
+fn get_config_dir() -> String {
+    env::var("OBX_CONFIG_DIR").unwrap_or(DEFAULT_CONFIG_DIR.to_string())
+}
 
 fn get_config_path() -> String {
-    env::var("OBX_CONFIG").unwrap_or(DEFAULT_CONFIG_PATH.to_string())
+    PathBuf::from(get_config_dir())
+        .join("./config.yml")
+        .to_str()
+        .unwrap()
+        .to_string()
 }
 
 fn get_config() -> anyhow::Result<Config> {
@@ -42,6 +50,6 @@ pub fn write(new_config: File) -> anyhow::Result<()> {
     let config_path = get_config_path();
     let serialized = serde_yaml::to_string(&new_config)?;
 
-    fs::write(config_path, serialized)
-        .with_context(|| "failed to write to config file {config_path}")
+    fs::write(&config_path, serialized)
+        .with_context(|| format!("failed to write to config file {config_path}"))
 }
