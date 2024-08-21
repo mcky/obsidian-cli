@@ -1,7 +1,7 @@
 use crate::{
     cli_config,
     formats::{yaml_to_json_value, yaml_to_string_map},
-    util::{get_current_vault, read_note, resolve_note_path},
+    util::{get_current_vault, read_note, resolve_note_path, CommandResult},
 };
 use anyhow::Context;
 use clap::{Args, Subcommand};
@@ -218,9 +218,7 @@ impl EnrichedNoteArgs {
     }
 }
 
-type ObxResult = anyhow::Result<Option<String>>;
-
-fn view(note: EnrichedNoteArgs) -> ObxResult {
+fn view(note: EnrichedNoteArgs) -> CommandResult {
     let note_content = fs::read_to_string(note.note_path.clone())
         .with_context(|| format!("Could not read note `{}`", note.note_file))?;
 
@@ -234,7 +232,7 @@ fn obsidian_note_uri(note_path: &PathBuf, vault: String) -> String {
     )
 }
 
-fn open(note: EnrichedNoteArgs) -> ObxResult {
+fn open(note: EnrichedNoteArgs) -> CommandResult {
     let uri = obsidian_note_uri(&note.note_path, note.vault.name);
 
     open::that(&uri).with_context(|| format!("Could not open obsidian url `{uri}`"))?;
@@ -242,7 +240,7 @@ fn open(note: EnrichedNoteArgs) -> ObxResult {
     Ok(None)
 }
 
-fn uri(note: EnrichedNoteArgs) -> ObxResult {
+fn uri(note: EnrichedNoteArgs) -> CommandResult {
     let uri = obsidian_note_uri(&note.note_path, note.vault.name);
 
     Ok(Some(uri))
@@ -265,7 +263,7 @@ fn create_note(note: &EnrichedNoteArgs, note_contents: &str) -> anyhow::Result<(
     Ok(())
 }
 
-fn create(note: EnrichedNoteArgs) -> ObxResult {
+fn create(note: EnrichedNoteArgs) -> CommandResult {
     let note_contents = "";
     create_note(&note, &note_contents)?;
 
@@ -285,7 +283,7 @@ fn create(note: EnrichedNoteArgs) -> ObxResult {
     }
 }
 
-fn edit(note: EnrichedNoteArgs, create_flag: &bool) -> ObxResult {
+fn edit(note: EnrichedNoteArgs, create_flag: &bool) -> CommandResult {
     let note_exists = note.note_path.exists();
     let term_is_attended = console::user_attended();
 
@@ -328,16 +326,16 @@ fn edit(note: EnrichedNoteArgs, create_flag: &bool) -> ObxResult {
     }
 }
 
-fn path(note: EnrichedNoteArgs) -> ObxResult {
+fn path(note: EnrichedNoteArgs) -> CommandResult {
     let note_path = note.note_path.to_str().unwrap().to_string();
     Ok(Some(note_path))
 }
 
-fn render(_note: EnrichedNoteArgs) -> ObxResult {
+fn render(_note: EnrichedNoteArgs) -> CommandResult {
     todo!()
 }
 
-fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> ObxResult {
+fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> CommandResult {
     let note = read_note(&note.note_path).with_context(|| "could not parse note")?;
 
     let formatted = match format {
@@ -375,10 +373,10 @@ fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> ObxResult 
     Ok(Some(formatted))
 }
 
-fn export(_note: EnrichedNoteArgs) -> ObxResult {
+fn export(_note: EnrichedNoteArgs) -> CommandResult {
     todo!()
 }
 
-fn backlinks(_note: EnrichedNoteArgs) -> ObxResult {
+fn backlinks(_note: EnrichedNoteArgs) -> CommandResult {
     todo!()
 }

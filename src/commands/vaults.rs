@@ -1,9 +1,11 @@
+use crate::{
+    cli_config,
+    util::{get_current_vault, CommandResult},
+};
 use anyhow::{anyhow, Context};
 use clap::{Args, Subcommand};
 use std::{fs, io, path::PathBuf};
 use tabled::{builder::Builder, settings::Style};
-
-use crate::{cli_config, util::get_current_vault};
 
 #[derive(Args, Debug, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -75,9 +77,7 @@ pub fn entry(cmd: &VaultsCommand) -> anyhow::Result<Option<String>> {
     }
 }
 
-type ObxResult = anyhow::Result<Option<String>>;
-
-fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> ObxResult {
+fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> CommandResult {
     let vault_name = vault_name_override.unwrap_or_else(|| {
         vault_path
             .components()
@@ -119,7 +119,7 @@ fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> ObxResul
     Ok(Some(format!("Created vault {vault_name}")))
 }
 
-fn list(list_format: &ListFormats) -> ObxResult {
+fn list(list_format: &ListFormats) -> CommandResult {
     let config = cli_config::read()?;
 
     let formatted = match list_format {
@@ -145,7 +145,7 @@ fn list(list_format: &ListFormats) -> ObxResult {
     Ok(Some(formatted))
 }
 
-fn switch(vault_name: &str) -> ObxResult {
+fn switch(vault_name: &str) -> CommandResult {
     let config = cli_config::read()?;
 
     config
@@ -164,7 +164,7 @@ fn switch(vault_name: &str) -> ObxResult {
     Ok(Some(format!("Switched to {vault_name}")))
 }
 
-fn current() -> ObxResult {
+fn current() -> CommandResult {
     let config = cli_config::read()?;
 
     let found_vault = config
@@ -182,7 +182,7 @@ fn current() -> ObxResult {
     Ok(Some(out))
 }
 
-fn path() -> ObxResult {
+fn path() -> CommandResult {
     let vault = get_current_vault(None)?;
     let vault_path = vault.path.to_str().unwrap().to_string();
 

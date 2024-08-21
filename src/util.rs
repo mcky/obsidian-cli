@@ -1,15 +1,15 @@
+use crate::{
+    cli_config,
+    obsidian_note::{ObsidianNote, Properties},
+};
+use anyhow::Context;
 use std::{
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
 };
 
-use anyhow::Context;
-
-use crate::{
-    cli_config,
-    obsidian_note::{ObsidianNote, Properties},
-};
+pub type CommandResult = anyhow::Result<Option<String>>;
 
 pub fn read_note(file_path: &PathBuf) -> anyhow::Result<ObsidianNote> {
     let file_contents = fs::read_to_string(&file_path)?;
