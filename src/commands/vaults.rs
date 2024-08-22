@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::{anyhow, Context};
 use clap::{Args, Subcommand};
+use dialoguer::{theme::ColorfulTheme, Select};
 use std::{fs, io, path::PathBuf};
 use tabled::{builder::Builder, settings::Style};
 
@@ -177,7 +178,7 @@ fn interactive_switch(config: &cli_config::File) -> String {
         .map(|v| format!("{} ({})", v.name.clone(), v.path.display()))
         .collect();
 
-    let selection = dialoguer::Select::new()
+    let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Select a vault")
         .items(&vaults)
         .interact()
