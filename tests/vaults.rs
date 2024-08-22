@@ -113,8 +113,14 @@ mod vaults {
         use super::*;
 
         #[test]
-        fn prints_success_message() {
-            Obx::from_command("vaults switch secondary").assert_stdout("Switched to secondary\n");
+        fn accepts_vault_name() {
+            Obx::from_command("vaults switch secondary").assert_stdout("Switched to vault secondary\n");
+        }
+
+        #[test]
+        #[ignore = "TODO: test interactive mode"]
+        fn prompts_when_name_not_provided() {
+            Obx::from_command("vaults switch");
         }
 
         #[test]

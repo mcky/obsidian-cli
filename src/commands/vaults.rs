@@ -23,7 +23,8 @@ enum Subcommands {
     /// List all vaults
     List(ListArgs),
 
-    /// Set a vault as current, to be implicitly used by commands
+    /// Set a vault as current, to be implicitly used by commands.
+    /// A vault can be explicitly provided, or chosen interactively
     Switch(SwitchArgs),
 
     /// Print the name and path of the current vault
@@ -47,8 +48,8 @@ struct CreateArgs {
 
 #[derive(Args, Debug, Clone)]
 struct SwitchArgs {
-    #[arg(help = "The identifier of the vault to be unlinked")]
-    vault: String,
+    #[arg(help = "The name of the vault to switch to")]
+    vault: Option<String>,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
@@ -70,7 +71,7 @@ pub fn entry(cmd: &VaultsCommand) -> anyhow::Result<Option<String>> {
             name,
         })) => create(&vault, name.clone()),
         Some(Subcommands::List(ListArgs { format })) => list(format),
-        Some(Subcommands::Switch(SwitchArgs { vault })) => switch(&vault),
+        Some(Subcommands::Switch(SwitchArgs { vault })) => switch(vault),
         Some(Subcommands::Current) => current(),
         Some(Subcommands::Path) => path(),
         None => todo!(),
@@ -145,8 +146,13 @@ fn list(list_format: &ListFormats) -> CommandResult {
     Ok(Some(formatted))
 }
 
-fn switch(vault_name: &str) -> CommandResult {
-    let config = cli_config::read()?;
+fn switch(vault_name_arg: &Option<String>) -> CommandResult {
+    let mut config = cli_config::read()?;
+
+    let vault_name: String = match vault_name_arg {
+        Some(s) => s.to_string(),
+        None => interactive_switch(&config),
+    };
 
     config
         .vaults
@@ -156,12 +162,30 @@ fn switch(vault_name: &str) -> CommandResult {
             format!("Could not switch to vault `{vault_name}`, vault doesn't exist")
         })?;
 
-    let mut cfg = cli_config::read()?;
-    cfg.current_vault = vault_name.to_string();
+    config.current_vault = vault_name.to_string();
 
-    let _ = cli_config::write(cfg);
+    let _ = cli_config::write(config);
 
-    Ok(Some(format!("Switched to {vault_name}")))
+    Ok(Some(format!("Switched to vault {vault_name}")))
+}
+
+fn interactive_switch(config: &cli_config::File) -> String {
+    // Construct a list of vaults in the format `vault (path)`
+    let vaults: Vec<String> = config
+        .vaults
+        .iter()
+        .map(|v| format!("{} ({})", v.name.clone(), v.path.display()))
+        .collect();
+
+    let selection = dialoguer::Select::new()
+        .with_prompt("Select a vault")
+        .items(&vaults)
+        .interact()
+        .unwrap();
+
+    let selected_vault = &config.vaults[selection];
+
+    selected_vault.name.to_string()
 }
 
 fn current() -> CommandResult {

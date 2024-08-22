@@ -16,8 +16,10 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Commands for interacting with individual notes
     Notes(commands::notes::NotesCommand),
 
+    /// Commands for interacting with vaults
     Vaults(commands::vaults::VaultsCommand),
 }
 
