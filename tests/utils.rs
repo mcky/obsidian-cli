@@ -1,14 +1,15 @@
-use assert_cmd::Command;
+use assert_cmd::prelude::*;
 use assert_fs::fixture::ChildPath;
 use assert_fs::prelude::*;
 use assert_fs::TempDir;
 use indoc::indoc;
 use predicates::prelude::*;
+use rexpect::session::PtyReplSession;
 use std::fs;
 use std::path::Path;
 
 pub struct Obx {
-    pub cmd: assert_cmd::Command,
+    pub cmd: std::process::Command,
     pub temp_dir: TempDir,
 }
 
@@ -16,7 +17,8 @@ impl Obx {
     pub fn from_command(command_str: &str) -> Self {
         let temp_dir = create_fixtures();
 
-        let mut cmd = Command::cargo_bin("obx").expect("failed to construct obx command");
+        let mut cmd =
+            std::process::Command::cargo_bin("obx").expect("failed to construct obx command");
 
         cmd.current_dir(&temp_dir);
 
@@ -44,6 +46,24 @@ impl Obx {
         Obx { cmd, temp_dir }
             .with_editor("")
             .with_config_file(&*&initial_cfg_file)
+    }
+
+    pub fn spawn_interactive(self, timeout: Option<u64>) -> anyhow::Result<PtyReplSession> {
+        // Take our usual cmd but instead of asserting on it, convert it into
+        // a string, then split it into the `cd $dir` and `cmd $args` parts
+        let cmd_str = &format!("{:?}", self.cmd);
+
+        let cmd_parts = cmd_str.split(" && ").collect::<Vec<&str>>();
+        let [cd_cmd, bin_cmd] = &cmd_parts[..] else {
+            panic!("couldn't split cmd_parts")
+        };
+
+        let mut p = rexpect::spawn_bash(timeout)?;
+
+        p.send_line(&cd_cmd).unwrap();
+        p.send_line(&bin_cmd).unwrap();
+
+        Ok(p)
     }
 
     pub fn with_config_file(self, cfg_file: &str) -> Self {

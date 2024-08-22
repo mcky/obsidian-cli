@@ -144,8 +144,8 @@ mod notes {
 
     mod edit {
         use super::*;
-        use rexpect::spawn_bash;
-        use std::process;
+        
+        
 
         #[test]
         fn opens_editor() {
@@ -189,18 +189,7 @@ mod notes {
 
             let edit_file = &cmd.temp_dir.child("main-vault/new-note.md");
 
-            // Take our usual cmd but instead of asserting on it, convert it into
-            // a string, then split it into the `cd $dir` and `cmd $args` parts
-            let cmd_str = &format!("{:?}", process::Command::from(cmd.cmd));
-            let cmd_parts = cmd_str.split(" && ").collect::<Vec<&str>>();
-            let [cd_cmd, bin_cmd] = &cmd_parts[..] else {
-                panic!("couldn't split cmd_parts")
-            };
-
-            let mut p = spawn_bash(Some(5_000)).unwrap();
-
-            p.send_line(&cd_cmd).unwrap();
-            p.send_line(&bin_cmd).unwrap();
+            let mut p = cmd.spawn_interactive(Some(5_000)).unwrap();
 
             p.exp_string("The note new-note.md does not exist, would you like to create it? [y/n]")
                 .unwrap();
@@ -218,18 +207,7 @@ mod notes {
 
             let edit_file = cmd.temp_dir.child("main-vault/new-note.md");
 
-            // Take our usual cmd but instead of asserting on it, convert it into
-            // a string, then split it into the `cd $dir` and `cmd $args` parts
-            let cmd_str = &format!("{:?}", process::Command::from(cmd.cmd));
-            let cmd_parts = cmd_str.split(" && ").collect::<Vec<&str>>();
-            let [cd_cmd, bin_cmd] = &cmd_parts[..] else {
-                panic!("couldn't split cmd_parts")
-            };
-
-            let mut p = spawn_bash(Some(5_000)).unwrap();
-
-            p.send_line(&cd_cmd).unwrap();
-            p.send_line(&bin_cmd).unwrap();
+            let mut p = cmd.spawn_interactive(Some(5_000)).unwrap();
 
             p.exp_string("The note new-note.md does not exist, would you like to create it? [y/n]")
                 .unwrap();
