@@ -1,8 +1,6 @@
-use crate::{cli_config, util::CommandResult};
+use crate::{cli_config, commands::vaults::interactive_switch, util::CommandResult};
 use clap::Args;
 use dialoguer::Confirm;
-
-use super::vaults::format_vault_table;
 
 #[derive(Args, Debug, Clone)]
 pub struct InitCommand {
@@ -14,9 +12,11 @@ pub struct InitCommand {
 pub fn entry(cmd: &InitCommand) -> CommandResult {
     let updated_config = create_or_overwrite_config(cmd)?;
 
-    if let Some(config) = updated_config {
-        let table = format_vault_table(config);
-        println!("{}", table);
+    if let Some(mut config) = updated_config {
+        let next_vault =
+            interactive_switch(&config, "Which vault would you like to set as the current");
+        config.current_vault = next_vault;
+        cli_config::write(config)?
     }
 
     Ok(None)

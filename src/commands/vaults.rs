@@ -129,17 +129,17 @@ fn list(list_format: &ListFormats) -> CommandResult {
             let json = serde_json::to_string(&config.vaults)?;
             json
         }
-        ListFormats::Pretty => format_vault_table(config),
+        ListFormats::Pretty => format_vault_table(&config),
     };
 
     Ok(Some(formatted))
 }
 
-pub fn format_vault_table(config: cli_config::File) -> String {
+pub fn format_vault_table(config: &cli_config::File) -> String {
     let mut builder = Builder::new();
 
-    for v in config.vaults {
-        builder.push_record([v.name, v.path.display().to_string()])
+    for v in &config.vaults {
+        builder.push_record([v.name.clone(), v.path.display().to_string()])
     }
     builder.insert_record(0, vec!["Name", "Path"]);
 
@@ -154,7 +154,7 @@ fn switch(vault_name_arg: &Option<String>) -> CommandResult {
 
     let vault_name: String = match vault_name_arg {
         Some(s) => s.to_string(),
-        None => interactive_switch(&config),
+        None => interactive_switch(&config, "Select a vault"),
     };
 
     config
@@ -172,7 +172,7 @@ fn switch(vault_name_arg: &Option<String>) -> CommandResult {
     Ok(Some(format!("Switched to vault {vault_name}")))
 }
 
-fn interactive_switch(config: &cli_config::File) -> String {
+pub fn interactive_switch(config: &cli_config::File, message: &str) -> String {
     // Construct a list of vaults in the format `vault (path)`
     let vaults: Vec<String> = config
         .vaults
@@ -181,7 +181,7 @@ fn interactive_switch(config: &cli_config::File) -> String {
         .collect();
 
     let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Select a vault")
+        .with_prompt(message)
         .items(&vaults)
         .interact()
         .unwrap();
