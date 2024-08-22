@@ -129,22 +129,24 @@ fn list(list_format: &ListFormats) -> CommandResult {
             let json = serde_json::to_string(&config.vaults)?;
             json
         }
-        ListFormats::Pretty => {
-            let mut builder = Builder::new();
-
-            for v in config.vaults {
-                builder.push_record([v.name, v.path.display().to_string()])
-            }
-            builder.insert_record(0, vec!["Name", "Path"]);
-
-            let mut table = builder.build();
-            table.with(Style::sharp());
-
-            format!("{table}")
-        }
+        ListFormats::Pretty => format_vault_table(config),
     };
 
     Ok(Some(formatted))
+}
+
+pub fn format_vault_table(config: cli_config::File) -> String {
+    let mut builder = Builder::new();
+
+    for v in config.vaults {
+        builder.push_record([v.name, v.path.display().to_string()])
+    }
+    builder.insert_record(0, vec!["Name", "Path"]);
+
+    let mut table = builder.build();
+    table.with(Style::sharp());
+
+    format!("{table}")
 }
 
 fn switch(vault_name_arg: &Option<String>) -> CommandResult {

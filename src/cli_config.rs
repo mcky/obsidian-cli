@@ -1,4 +1,5 @@
-use anyhow::Context;
+use crate::app_settings;
+use anyhow::{bail, Context};
 use config::Config;
 use etcetera::BaseStrategy;
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,8 @@ fn get_config_dir() -> &'static PathBuf {
         let config_dir = match env::var("OBX_CONFIG_DIR") {
             Ok(dir) => PathBuf::from(dir),
             Err(VarError::NotPresent) => {
-                let strategy = etcetera::choose_base_strategy().unwrap();
+                let strategy =
+                    etcetera::choose_base_strategy().expect("etcetera base strategy should work");
                 strategy.config_dir()
             }
             _ => panic!("Malformed OBX_CONFIG_DIR"),
@@ -60,12 +62,78 @@ pub fn read() -> anyhow::Result<File> {
     Ok(config)
 }
 
+pub fn exists() -> bool {
+    let config_path = get_config_path();
+    Path::exists(&config_path)
+}
+
 pub fn write(new_config: File) -> anyhow::Result<()> {
     let config_path = get_config_path();
     let serialized = serde_yaml::to_string(&new_config)?;
 
     fs::write(&config_path, serialized)
-        .with_context(|| format!("failed to write to config file {config_path}"))
+        .with_context(|| format!("failed to write to config file {}", config_path.display()))
+}
+
+impl TryFrom<app_settings::Settings> for File {
+    type Error = anyhow::Error;
+
+    fn try_from(settings: app_settings::Settings) -> Result<Self, Self::Error> {
+        let vaults: Vec<Vault> = Vec::from_iter(settings.vaults.iter().map(|(_, vault)| {
+            Vault {
+                // @TODO: fn to get name from path
+                name: vault
+                    .path
+                    .components()
+                    .last()
+                    .unwrap()
+                    .as_os_str()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+                path: PathBuf::from(&vault.path),
+            }
+        }));
+
+        match vaults.len() {
+            0 => {
+                // We can't set a current vault without having at least one
+                // in future if cfg.current_vault is set to optional we
+                // could remove this
+                bail!("Settings must contain at least one vault")
+            }
+            _n => {
+                let config = File {
+                    current_vault: vaults[0].clone().name,
+                    vaults: vaults,
+                };
+
+                Ok(config)
+            }
+        }
+    }
+}
+
+pub fn create_from_settings() -> anyhow::Result<File> {
+    let config_dir = get_config_dir();
+    let config_path = get_config_path();
+
+    fs::create_dir_all(config_dir)?;
+
+    fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(&config_path)
+        .with_context(|| format!("failed to create config file at {}", config_path.display()))?;
+
+    let settings = app_settings::read()?;
+    let config = File::try_from(settings)?;
+
+    write(config.clone())?;
+
+    Ok(config)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
