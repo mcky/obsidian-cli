@@ -366,7 +366,7 @@ fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> CommandRes
             let mut table = builder.build();
             table.with(Style::sharp());
 
-            format!("\n{table}\n")
+            format!("{table}")
         }
         ExportFormatOption::Html => todo!(),
     };

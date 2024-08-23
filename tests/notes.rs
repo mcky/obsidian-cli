@@ -290,7 +290,6 @@ mod notes {
         #[test]
         fn prints_frontmatter_properties_as_table() {
             Obx::from_command("notes properties with-fm-properties.md").assert_stdout(indoc! { r#"
-
                 ┌───────────────┬──────────────┐
                 │ Property      │ Value        │
                 ├───────────────┼──────────────┤
@@ -299,7 +298,6 @@ mod notes {
                 │ test-number   │ 100          │
                 │ test-str      │ a string val │
                 └───────────────┴──────────────┘
-
             "# });
         }
 
