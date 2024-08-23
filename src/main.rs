@@ -24,6 +24,8 @@ enum Commands {
     Vaults(commands::vaults::VaultsCommand),
 
     Init(commands::init::InitCommand),
+    /// Commands for managing config
+    Config(commands::config::ConfigCommand),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -33,6 +35,7 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::Notes(args)) => commands::notes::entry(args),
         Some(Commands::Vaults(args)) => commands::vaults::entry(args),
         Some(Commands::Init(args)) => commands::init::entry(args),
+        Some(Commands::Config(args)) => commands::config::entry(args),
         None => {
             todo!("Needs a sub-command");
         }
