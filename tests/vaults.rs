@@ -64,7 +64,6 @@ mod vaults {
 
             list_cmd.assert_stdout_contains(expected_path);
         }
-
     }
 
     mod list {
@@ -114,7 +113,8 @@ mod vaults {
 
         #[test]
         fn accepts_vault_name() {
-            Obx::from_command("vaults switch secondary").assert_stdout("Switched to vault secondary\n");
+            Obx::from_command("vaults switch secondary")
+                .assert_stdout("Switched to vault secondary\n");
         }
 
         #[test]

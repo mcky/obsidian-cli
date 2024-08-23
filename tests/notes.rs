@@ -144,8 +144,6 @@ mod notes {
 
     mod edit {
         use super::*;
-        
-        
 
         #[test]
         fn opens_editor() {
