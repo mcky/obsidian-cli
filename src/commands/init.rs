@@ -1,13 +1,12 @@
 use crate::{cli_config, commands::vaults::interactive_switch, util::CommandResult};
-use clap::Args;
+use clap::{ArgAction, Args};
 use dialoguer::Confirm;
 
 #[derive(Args, Debug, Clone)]
-#[command(arg_required_else_help = true)]
 pub struct InitCommand {
     /// Accept all suggestions without prompting
-    #[arg(long, short = 'y')]
-    yes: Option<bool>,
+    #[arg(long, action=ArgAction::SetTrue)]
+    overwrite: Option<bool>,
 }
 
 pub fn entry(cmd: &InitCommand) -> CommandResult {
@@ -29,12 +28,12 @@ fn create_or_overwrite_config(cmd: &InitCommand) -> anyhow::Result<Option<cli_co
 
     if config_file_exists {
         let term_is_attended = console::user_attended();
-        let override_flag_exists = cmd.yes.is_some();
+        let override_flag_exists = cmd.overwrite.is_some();
 
         let mut confirmation = false;
 
         if override_flag_exists {
-            confirmation = cmd.yes.unwrap_or(false);
+            confirmation = cmd.overwrite.unwrap_or(false);
         } else if term_is_attended {
             let prompt = format!(
                 "A config file already exists at {}, do you want to override it?",
