@@ -112,6 +112,7 @@ fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> CommandR
 
     let mut cfg = cli_config::read()?;
 
+    cfg.current_vault = vault_name.clone();
     cfg.vaults.push(cli_config::Vault {
         name: vault_name.clone(),
         path: resolved_path.to_path_buf(),
