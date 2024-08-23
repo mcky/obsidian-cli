@@ -4,6 +4,9 @@ _default:
 build:
   cargo build
 
+install:
+  cargo install --path .
+
 run args:
   cargo run -- {{args}}
 
