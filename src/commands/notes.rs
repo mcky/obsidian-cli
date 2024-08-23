@@ -15,6 +15,9 @@ use tabled::{builder::Builder, settings::Style};
 pub struct NotesCommand {
     #[command(subcommand)]
     command: Option<Subcommands>,
+
+    #[arg(long, short = 'v', global = true)]
+    vault: Option<String>,
 }
 
 #[derive(Debug, Subcommand, Clone)]
@@ -37,17 +40,15 @@ enum Subcommands {
     /// Print the full file-path of the note
     Path(PathArgs),
 
-    /// Pretty-print a markdown note
-    Render(RenderArgs),
-
+    // Pretty-print a markdown note
+    // Render(RenderArgs),
     /// View the properties of a note
     Properties(PropertiesArgs),
+    // Convert the note to a range of formats
+    // Export(ExportArgs),
 
-    /// Convert the note to a range of formats
-    Export(ExportArgs),
-
-    /// View the files within the vault that contain backlinks to this file
-    Backlinks(BacklinksArgs),
+    // View the files within the vault that contain backlinks to this file
+    // Backlinks(BacklinksArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -55,7 +56,7 @@ struct NoteArgs {
     #[arg(help = "The path to the note, if the extension is omitted .md will be assumed")]
     note: String,
 
-    #[arg(long, short = 'v')]
+    #[arg(long, short = 'v', global = true)]
     vault: Option<String>,
 }
 
@@ -172,22 +173,22 @@ pub fn entry(cmd: &NotesCommand) -> anyhow::Result<Option<String>> {
             let args = EnrichedNoteArgs::from_args(common)?;
             path(args)
         }
-        Some(Subcommands::Render(RenderArgs { common })) => {
-            let args = EnrichedNoteArgs::from_args(common)?;
-            render(args)
-        }
+        // Some(Subcommands::Render(RenderArgs { common })) => {
+        //     let args = EnrichedNoteArgs::from_args(common)?;
+        //     render(args)
+        // }
         Some(Subcommands::Properties(PropertiesArgs { common, format, .. })) => {
             let args = EnrichedNoteArgs::from_args(common)?;
             properties(args, format)
         }
-        Some(Subcommands::Export(ExportArgs { common, .. })) => {
-            let args = EnrichedNoteArgs::from_args(common)?;
-            export(args)
-        }
-        Some(Subcommands::Backlinks(BacklinksArgs { common, .. })) => {
-            let args = EnrichedNoteArgs::from_args(common)?;
-            backlinks(args)
-        }
+        // Some(Subcommands::Export(ExportArgs { common, .. })) => {
+        //     let args = EnrichedNoteArgs::from_args(common)?;
+        //     export(args)
+        // }
+        // Some(Subcommands::Backlinks(BacklinksArgs { common, .. })) => {
+        //     let args = EnrichedNoteArgs::from_args(common)?;
+        //     backlinks(args)
+        // }
         None => todo!(),
     }
 }
@@ -332,10 +333,6 @@ fn path(note: EnrichedNoteArgs) -> CommandResult {
     Ok(Some(note_path))
 }
 
-fn render(_note: EnrichedNoteArgs) -> CommandResult {
-    todo!()
-}
-
 fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> CommandResult {
     let note = read_note(&note.note_path).with_context(|| "could not parse note")?;
 
@@ -372,12 +369,4 @@ fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> CommandRes
     };
 
     Ok(Some(formatted))
-}
-
-fn export(_note: EnrichedNoteArgs) -> CommandResult {
-    todo!()
-}
-
-fn backlinks(_note: EnrichedNoteArgs) -> CommandResult {
-    todo!()
 }
