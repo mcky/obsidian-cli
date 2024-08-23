@@ -4,6 +4,7 @@ use clap::{Args, Subcommand};
 
 #[derive(Args, Debug, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
+#[command(arg_required_else_help = true)]
 pub struct ConfigCommand {
     #[command(subcommand)]
     command: Option<Subcommands>,

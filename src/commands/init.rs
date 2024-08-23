@@ -3,6 +3,7 @@ use clap::Args;
 use dialoguer::Confirm;
 
 #[derive(Args, Debug, Clone)]
+#[command(arg_required_else_help = true)]
 pub struct InitCommand {
     /// Accept all suggestions without prompting
     #[arg(long, short = 'y')]

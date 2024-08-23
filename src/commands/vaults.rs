@@ -10,6 +10,7 @@ use tabled::{builder::Builder, settings::Style};
 
 #[derive(Args, Debug, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
+#[command(arg_required_else_help = true)]
 pub struct VaultsCommand {
     #[command(subcommand)]
     command: Option<Subcommands>,
