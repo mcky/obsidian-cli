@@ -1,5 +1,5 @@
 [package]
-name = "obx-cli"
+name = "obsidian-cli"
 version = "0.1.2"
 edition = "2021"
 description = "A CLI for managing obsidian vaults, notes and databases"
