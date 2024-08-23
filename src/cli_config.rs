@@ -31,7 +31,7 @@ fn get_config_dir() -> &'static PathBuf {
             Err(VarError::NotPresent) => {
                 let strategy =
                     etcetera::choose_base_strategy().expect("etcetera base strategy should work");
-                strategy.config_dir()
+                strategy.config_dir().join("obx")
             }
             _ => panic!("Malformed OBX_CONFIG_DIR"),
         };
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     #[cfg(target_os = "macos")]
     fn get_config_dir_returns_user_config() {
-        let re = Regex::new(r"\/Users\/\w+\/.config\/").unwrap();
+        let re = Regex::new(r"\/Users\/\w+\/.config\/obx\/").unwrap();
         let dir = format!("{}", get_config_dir().display());
         assert!(re.is_match(&dir));
     }
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     #[cfg(target_os = "macos")]
     fn get_config_path_returns_user_config() {
-        let re = Regex::new(r"\/Users\/\w+\/.config\/config.yml").unwrap();
+        let re = Regex::new(r"\/Users\/\w+\/.config\/obx\/config.yml").unwrap();
         let dir = format!("{}", get_config_path().display());
         assert!(re.is_match(&dir));
     }
