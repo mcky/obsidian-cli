@@ -6,17 +6,23 @@ use dialoguer::Confirm;
 pub struct InitCommand {
     /// Accept all suggestions without prompting
     #[arg(long, action=ArgAction::SetTrue)]
-    overwrite: Option<bool>,
+    overwrite: bool,
+
+    /// Don't prompt to select a vault
+    #[arg(long, action=ArgAction::SetTrue)]
+    auto_vault: bool,
 }
 
 pub fn entry(cmd: &InitCommand) -> CommandResult {
     let updated_config = create_or_overwrite_config(cmd)?;
 
     if let Some(mut config) = updated_config {
-        let next_vault =
-            interactive_switch(&config, "Which vault would you like to set as the current");
-        config.current_vault = next_vault;
-        cli_config::write(config)?
+        if !cmd.auto_vault {
+            let next_vault =
+                interactive_switch(&config, "Which vault would you like to set as the current");
+            config.current_vault = next_vault;
+        }
+        cli_config::write(config.clone())?;
     }
 
     Ok(None)
@@ -28,12 +34,11 @@ fn create_or_overwrite_config(cmd: &InitCommand) -> anyhow::Result<Option<cli_co
 
     if config_file_exists {
         let term_is_attended = console::user_attended();
-        let override_flag_exists = cmd.overwrite.is_some();
 
         let mut confirmation = false;
 
-        if override_flag_exists {
-            confirmation = cmd.overwrite.unwrap_or(false);
+        if cmd.overwrite {
+            confirmation = true;
         } else if term_is_attended {
             let prompt = format!(
                 "A config file already exists at {}, do you want to override it?",
