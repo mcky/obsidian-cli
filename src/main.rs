@@ -6,7 +6,6 @@ pub mod app_settings;
 pub mod cli_config;
 pub mod commands;
 pub mod formats;
-pub mod obsidian_note;
 pub mod util;
 
 #[derive(Parser)]

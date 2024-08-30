@@ -1,9 +1,7 @@
-use crate::{
-    cli_config,
-    obsidian_note::{ObsidianNote, Properties},
-};
+use crate::cli_config;
 use anyhow::Context;
 use atty::{is, Stream};
+use libobsidian::{ObsidianNote, Properties};
 use std::{
     ffi::OsStr,
     fs,
@@ -11,50 +9,6 @@ use std::{
 };
 
 pub type CommandResult = anyhow::Result<Option<String>>;
-
-pub fn read_note(file_path: &PathBuf) -> anyhow::Result<ObsidianNote> {
-    let file_contents = fs::read_to_string(file_path)?;
-    let note = parse_note(file_path, file_contents)?;
-    Ok(note)
-}
-
-fn extract_frontmatter(content: &str) -> (Option<String>, Option<String>) {
-    let delimiter = "---";
-    let mut parts = content.splitn(3, delimiter);
-
-    match (parts.next(), parts.next(), parts.next()) {
-        (Some(""), Some(frontmatter), Some(body)) => (
-            Some(frontmatter.trim().to_string()),
-            Some(body.trim().to_string()),
-        ),
-        (Some(""), Some(frontmatter), None) => (Some(frontmatter.trim().to_string()), None),
-        _ => (None, Some(content.trim().to_string())),
-    }
-}
-
-pub fn parse_note(file_path: &PathBuf, file_contents: String) -> anyhow::Result<ObsidianNote> {
-    let (frontmatter_str, file_body) = extract_frontmatter(&file_contents);
-
-    let frontmatter = frontmatter_str
-        .map(|s| serde_yaml::from_str::<Properties>(&s))
-        .transpose()?
-        .and_then(|fm| {
-            if fm == serde_yaml::Value::Null {
-                None
-            } else {
-                Some(fm)
-            }
-        });
-
-    let note = ObsidianNote {
-        file_path: file_path.clone(),
-        file_body: file_body.unwrap_or(String::new()),
-        file_contents,
-        properties: frontmatter,
-    };
-
-    Ok(note)
-}
 
 pub fn resolve_note_path(path_or_string: &str, vault_path: &PathBuf) -> anyhow::Result<PathBuf> {
     let file_path = Path::new(path_or_string);
@@ -91,7 +45,6 @@ pub fn should_enable_interactivity() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indoc::indoc;
     use test_case::test_case;
 
     #[test_case("foo", "foo.md" ; "plain filename")]
@@ -118,72 +71,5 @@ mod tests {
     #[ignore]
     fn note_path_errors_on_invalid() {
         assert!(resolve_note_path(" ", &PathBuf::from("")).is_err());
-    }
-
-    #[test]
-    fn parse_note_returns_body() {
-        let note_content = indoc! {r"
-            ---
-            some-property: foo
-            ---
-            The note body
-        "};
-        let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
-
-        assert_eq!(note.file_body.trim(), "The note body");
-    }
-
-    #[test]
-    fn parse_note_returns_properties() {
-        let note_content = indoc! {r"
-            ---
-            some-property: foo
-            ---
-        "};
-        let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
-
-        assert_eq!(
-            note.properties,
-            Some(serde_yaml::Value::Mapping(serde_yaml::Mapping::from_iter(
-                vec![(
-                    serde_yaml::Value::String("some-property".to_string()),
-                    serde_yaml::Value::String("foo".to_string())
-                )]
-                .into_iter()
-            )))
-        );
-    }
-
-    #[test]
-    fn parse_note_handles_missing_frontmatter() {
-        let note =
-            parse_note(&PathBuf::from("a-note.md"), "The note contents".to_string()).unwrap();
-        assert_eq!(note.properties, None);
-    }
-
-    #[test]
-    fn parse_note_handles_empty_frontmatter() {
-        let note_content = indoc! {r"
-            ---
-            ---
-            The note content
-        "};
-
-        let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
-        assert_eq!(note.properties, None);
-    }
-
-    #[test]
-    fn parse_note_handles_tables() {
-        // Markdown tables also contain `---`
-        let note_content = indoc! {r"
-            | Col1      | Col2      |
-            |-----------|-----------|
-            | Row1 Col1 | Row1 Col2 |
-            | Row2 Col1 | Row2 Col2 |
-        "};
-
-        let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
-        assert_eq!(note.properties, None);
     }
 }

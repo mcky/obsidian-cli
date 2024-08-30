@@ -1,14 +1,13 @@
 use crate::{
     cli_config,
     formats::{yaml_to_json_value, yaml_to_string_map},
-    util::{
-        get_current_vault, read_note, resolve_note_path, should_enable_interactivity, CommandResult,
-    },
+    util::{get_current_vault, resolve_note_path, should_enable_interactivity, CommandResult},
 };
 use anyhow::{anyhow, Context};
 use atty::{isnt, Stream};
 use clap::{Args, Subcommand};
 use dialoguer::Confirm;
+use libobsidian::ObsidianNote;
 use std::{env, fs, io, path::PathBuf, process};
 use tabled::{builder::Builder, settings::Style};
 
@@ -359,7 +358,8 @@ fn path(note: EnrichedNoteArgs) -> CommandResult {
 }
 
 fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> CommandResult {
-    let note = read_note(&note.note_path).with_context(|| "could not parse note")?;
+    let note =
+        ObsidianNote::read_from_path(&note.note_path).with_context(|| "could not parse note")?;
 
     let formatted = match format {
         ExportFormatOption::Json => {
@@ -370,11 +370,11 @@ fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> CommandRes
             serde_json::to_string(&json_value)?
         }
         ExportFormatOption::Pretty => {
-            let Some(serde_yaml::Value::Mapping(p)) = note.properties else {
+            let Some(serde_yaml::Value::Mapping(properties)) = note.properties else {
                 panic!("Expected note.properties to be yaml::Value::mapping")
             };
 
-            let mut property_strings = yaml_to_string_map(&p)
+            let mut property_strings = yaml_to_string_map(&properties)
                 .into_iter()
                 .map(|(k, v)| vec![k, v])
                 .collect::<Vec<Vec<String>>>();
