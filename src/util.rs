@@ -3,6 +3,7 @@ use crate::{
     obsidian_note::{ObsidianNote, Properties},
 };
 use anyhow::Context;
+use atty::{is, Stream};
 use std::{
     ffi::OsStr,
     fs,
@@ -81,6 +82,10 @@ pub fn get_current_vault(vault_name_override: Option<String>) -> anyhow::Result<
         .clone();
 
     Ok(found_vault)
+}
+
+pub fn should_enable_interactivity() -> bool {
+    is(Stream::Stderr) || is(Stream::Stdin)
 }
 
 #[cfg(test)]

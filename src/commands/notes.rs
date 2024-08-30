@@ -1,11 +1,17 @@
 use crate::{
     cli_config,
     formats::{yaml_to_json_value, yaml_to_string_map},
-    util::{get_current_vault, read_note, resolve_note_path, CommandResult},
+    util::{
+        get_current_vault, read_note, resolve_note_path, should_enable_interactivity, CommandResult,
+    },
 };
-use anyhow::Context;
+use anyhow::{anyhow, Context};
+use atty::{isnt, Stream};
 use clap::{Args, Subcommand};
 use dialoguer::Confirm;
+use std::{
+    io::{BufRead},
+};
 use std::{env, fs, path::PathBuf, process};
 use tabled::{builder::Builder, settings::Style};
 
@@ -159,8 +165,9 @@ pub fn entry(cmd: &NotesCommand) -> anyhow::Result<Option<String>> {
             open(args)
         }
         Some(Subcommands::Create(CreateArgs { common })) => {
+            let stdin = maybe_stdin()?;
             let args = EnrichedNoteArgs::from_args(common)?;
-            create(args)
+            create(args, stdin)
         }
         Some(Subcommands::Edit(EditArgs {
             common,
@@ -265,9 +272,12 @@ fn create_note(note: &EnrichedNoteArgs, note_contents: &str) -> anyhow::Result<(
     Ok(())
 }
 
-fn create(note: EnrichedNoteArgs) -> CommandResult {
-    let note_contents = "";
-    create_note(&note, &note_contents)?;
+fn create(note: EnrichedNoteArgs, stdin: Option<String>) -> CommandResult {
+    let note_input: String = stdin.unwrap_or("".to_string());
+
+    let initial_note_content = initial_note_content_from_stdin(note_input.clone())?;
+
+    create_note(&note, &initial_note_content)?;
 
     let editor = env::var("EDITOR").context("$EDITOR not found")?;
 
@@ -285,9 +295,27 @@ fn create(note: EnrichedNoteArgs) -> CommandResult {
     }
 }
 
+fn initial_note_content_from_stdin(stdin: String) -> anyhow::Result<String> {
+    let trimmed = stdin.trim();
+
+    // Check if the trimmed input looks like JSON
+    if trimmed.starts_with('{') && trimmed.ends_with('}') {
+        match serde_json::from_str::<serde_json::Value>(trimmed) {
+            Ok(json) => {
+                let yaml = serde_yaml::to_string(&json)?;
+                let as_frontmatter = format!("---\n{}\n---\n", yaml.trim());
+                Ok(as_frontmatter)
+            }
+            Err(e) => Err(anyhow!("Input looks like JSON but failed to parse: {}", e)),
+        }
+    } else {
+        Ok(stdin)
+    }
+}
+
 fn edit(note: EnrichedNoteArgs, create_flag: &bool) -> CommandResult {
     let note_exists = note.note_path.exists();
-    let term_is_attended = console::user_attended();
+    let term_is_attended = should_enable_interactivity();
 
     if !note_exists {
         let mut confirmation = false;
@@ -369,4 +397,15 @@ fn properties(note: EnrichedNoteArgs, format: &ExportFormatOption) -> CommandRes
     };
 
     Ok(Some(formatted))
+}
+
+fn maybe_stdin() -> anyhow::Result<Option<String>> {
+    match isnt(Stream::Stdin) {
+        true => {
+            let mut buffer = String::new();
+            std::io::stdin().read_line(&mut buffer)?;
+            Ok(Some(buffer))
+        }
+        false => Ok(None),
+    }
 }

@@ -1,4 +1,8 @@
-use crate::{cli_config, commands::vaults::interactive_switch, util::CommandResult};
+use crate::{
+    cli_config,
+    commands::vaults::interactive_switch,
+    util::{should_enable_interactivity, CommandResult},
+};
 use clap::{ArgAction, Args};
 use dialoguer::Confirm;
 
@@ -33,7 +37,7 @@ fn create_or_overwrite_config(cmd: &InitCommand) -> anyhow::Result<Option<cli_co
     let config_path = cli_config::get_config_path();
 
     if config_file_exists {
-        let term_is_attended = console::user_attended();
+        let term_is_attended = should_enable_interactivity();
 
         let mut confirmation = false;
 
