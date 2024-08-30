@@ -22,7 +22,7 @@ impl Obx {
 
         cmd.current_dir(&temp_dir);
 
-        let args = command_str.split(" ");
+        let args = command_str.split(' ');
         for arg in args {
             cmd.arg(arg);
         }
@@ -43,9 +43,9 @@ impl Obx {
 
         cmd.env("OBX_CONFIG_DIR", config_path.display().to_string());
 
-        Obx { cmd, temp_dir }
+        Self { cmd, temp_dir }
             .with_editor("")
-            .with_config_file(&*&initial_cfg_file)
+            .with_config_file(&initial_cfg_file)
     }
 
     pub fn spawn_interactive(self, timeout: Option<u64>) -> anyhow::Result<PtyReplSession> {
@@ -60,8 +60,8 @@ impl Obx {
 
         let mut p = rexpect::spawn_bash(timeout)?;
 
-        p.send_line(&cd_cmd).unwrap();
-        p.send_line(&bin_cmd).unwrap();
+        p.send_line(cd_cmd).unwrap();
+        p.send_line(bin_cmd).unwrap();
 
         Ok(p)
     }
@@ -69,7 +69,7 @@ impl Obx {
     pub fn with_config_file(self, cfg_file: &str) -> Self {
         self.temp_dir
             .child("./config/obx/config.yml")
-            .write_str(&cfg_file)
+            .write_str(cfg_file)
             .expect("should be able to write to config file");
 
         self
@@ -80,8 +80,7 @@ impl Obx {
         S: Into<String>,
     {
         let mock_editor = create_editor_script(editor_script, &self.temp_dir);
-        self.cmd
-            .env("EDITOR", &mock_editor.path().to_str().unwrap());
+        self.cmd.env("EDITOR", mock_editor.path().to_str().unwrap());
 
         self
     }
@@ -160,7 +159,7 @@ impl Obx {
     }
 }
 
-/// Create a TempDir and clone our example vault into it
+/// Create a `TempDir` and clone our example vault into it
 pub fn create_fixtures() -> TempDir {
     let dir = TempDir::new().expect("failed to create new TempDir");
 

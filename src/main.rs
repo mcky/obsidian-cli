@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
 
     match res {
         Ok(Some(content)) => {
-            println!("{}", content);
+            println!("{content}");
         }
         Ok(None) => {}
         Err(e) => {

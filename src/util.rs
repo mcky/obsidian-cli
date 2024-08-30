@@ -13,7 +13,7 @@ use std::{
 pub type CommandResult = anyhow::Result<Option<String>>;
 
 pub fn read_note(file_path: &PathBuf) -> anyhow::Result<ObsidianNote> {
-    let file_contents = fs::read_to_string(&file_path)?;
+    let file_contents = fs::read_to_string(file_path)?;
     let note = parse_note(file_path, file_contents)?;
     Ok(note)
 }
@@ -47,9 +47,9 @@ pub fn parse_note(file_path: &PathBuf, file_contents: String) -> anyhow::Result<
         });
 
     let note = ObsidianNote {
-        file_path: file_path.to_path_buf(),
-        file_body: file_body.unwrap_or("".to_string()),
-        file_contents: file_contents,
+        file_path: file_path.clone(),
+        file_body: file_body.unwrap_or(String::new()),
+        file_contents,
         properties: frontmatter,
     };
 
@@ -60,14 +60,14 @@ pub fn resolve_note_path(path_or_string: &str, vault_path: &PathBuf) -> anyhow::
     let file_path = Path::new(path_or_string);
 
     let path_with_ext: PathBuf = match file_path.extension().and_then(OsStr::to_str) {
-        Some("md") => file_path.to_path_buf().to_owned(),
+        Some("md") => file_path.to_path_buf(),
         Some(_) => file_path.to_owned(),
         None => file_path.with_extension("md"),
     };
 
     let note_path = vault_path.join(path_with_ext);
 
-    return Ok(note_path);
+    Ok(note_path)
 }
 
 pub fn get_current_vault(vault_name_override: Option<String>) -> anyhow::Result<cli_config::Vault> {
@@ -102,7 +102,7 @@ mod tests {
         assert_eq!(
             resolve_note_path(input, &PathBuf::from("")).unwrap(),
             PathBuf::from(expected)
-        )
+        );
     }
 
     #[test_case("foo.md", "/path/to/", "/path/to/foo.md")]
@@ -111,7 +111,7 @@ mod tests {
         assert_eq!(
             resolve_note_path(file, &PathBuf::from(vault)).unwrap(),
             PathBuf::from(expected)
-        )
+        );
     }
 
     #[test]
@@ -122,12 +122,12 @@ mod tests {
 
     #[test]
     fn parse_note_returns_body() {
-        let note_content = indoc! {r#"
+        let note_content = indoc! {r"
             ---
             some-property: foo
             ---
             The note body
-        "#};
+        "};
         let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
 
         assert_eq!(note.file_body.trim(), "The note body");
@@ -135,11 +135,11 @@ mod tests {
 
     #[test]
     fn parse_note_returns_properties() {
-        let note_content = indoc! {r#"
+        let note_content = indoc! {r"
             ---
             some-property: foo
             ---
-        "#};
+        "};
         let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
 
         assert_eq!(
@@ -163,11 +163,11 @@ mod tests {
 
     #[test]
     fn parse_note_handles_empty_frontmatter() {
-        let note_content = indoc! {r#"
+        let note_content = indoc! {r"
             ---
             ---
             The note content
-        "#};
+        "};
 
         let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
         assert_eq!(note.properties, None);
@@ -176,12 +176,12 @@ mod tests {
     #[test]
     fn parse_note_handles_tables() {
         // Markdown tables also contain `---`
-        let note_content = indoc! {r#"
+        let note_content = indoc! {r"
             | Col1      | Col2      |
             |-----------|-----------|
             | Row1 Col1 | Row1 Col2 |
             | Row2 Col1 | Row2 Col2 |
-        "#};
+        "};
 
         let note = parse_note(&PathBuf::from("a-note.md"), note_content.to_string()).unwrap();
         assert_eq!(note.properties, None);

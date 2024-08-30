@@ -38,7 +38,7 @@ pub struct Settings {
 
 pub fn read() -> anyhow::Result<Settings> {
     let settings_path = obsidian_app_settings_path();
-    let settings_file = fs::read_to_string(&settings_path).with_context(|| {
+    let settings_file = fs::read_to_string(settings_path).with_context(|| {
         format!(
             "failed to read obsidian app settings file at path `{}`",
             settings_path.display()

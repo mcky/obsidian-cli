@@ -71,7 +71,7 @@ pub fn entry(cmd: &VaultsCommand) -> anyhow::Result<Option<String>> {
         Some(Subcommands::Create(CreateArgs {
             vault_path: vault,
             name,
-        })) => create(&vault, name.clone()),
+        })) => create(vault, name.clone()),
         Some(Subcommands::List(ListArgs { format })) => list(format),
         Some(Subcommands::Switch(SwitchArgs { vault })) => switch(vault),
         Some(Subcommands::Current) => current(),
@@ -110,15 +110,15 @@ fn create(vault_path: &PathBuf, vault_name_override: Option<String>) -> CommandR
         ));
     }
 
-    let mut cfg = cli_config::read()?;
+    let mut config = cli_config::read()?;
 
-    cfg.current_vault = vault_name.clone();
-    cfg.vaults.push(cli_config::Vault {
+    config.current_vault = vault_name.clone();
+    config.vaults.push(cli_config::Vault {
         name: vault_name.clone(),
-        path: resolved_path.to_path_buf(),
+        path: resolved_path,
     });
 
-    let _ = cli_config::write(cfg);
+    let _ = cli_config::write(&config);
 
     Ok(Some(format!("Created vault {vault_name}")))
 }
@@ -127,10 +127,7 @@ fn list(list_format: &ListFormats) -> CommandResult {
     let config = cli_config::read()?;
 
     let formatted = match list_format {
-        &ListFormats::Json => {
-            let json = serde_json::to_string(&config.vaults)?;
-            json
-        }
+        &ListFormats::Json => serde_json::to_string(&config.vaults)?,
         ListFormats::Pretty => format_vault_table(&config),
     };
 
@@ -141,7 +138,7 @@ pub fn format_vault_table(config: &cli_config::File) -> String {
     let mut builder = Builder::new();
 
     for v in &config.vaults {
-        builder.push_record([v.name.clone(), v.path.display().to_string()])
+        builder.push_record([v.name.clone(), v.path.display().to_string()]);
     }
     builder.insert_record(0, vec!["Name", "Path"]);
 
@@ -169,7 +166,7 @@ fn switch(vault_name_arg: &Option<String>) -> CommandResult {
 
     config.current_vault = vault_name.to_string();
 
-    let _ = cli_config::write(config);
+    let _ = cli_config::write(&config);
 
     Ok(Some(format!("Switched to vault {vault_name}")))
 }

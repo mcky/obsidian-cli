@@ -9,10 +9,7 @@ use anyhow::{anyhow, Context};
 use atty::{isnt, Stream};
 use clap::{Args, Subcommand};
 use dialoguer::Confirm;
-use std::{
-    io::{BufRead},
-};
-use std::{env, fs, path::PathBuf, process};
+use std::{env, fs, io, path::PathBuf, process};
 use tabled::{builder::Builder, settings::Style};
 
 #[derive(Args, Debug, Clone)]
@@ -207,7 +204,7 @@ struct EnrichedNoteArgs {
 }
 
 impl EnrichedNoteArgs {
-    fn from_args(args: &NoteArgs) -> anyhow::Result<EnrichedNoteArgs> {
+    fn from_args(args: &NoteArgs) -> anyhow::Result<Self> {
         let vault_name = &args.vault;
         let vault = get_current_vault(vault_name.clone())?;
 
@@ -219,7 +216,7 @@ impl EnrichedNoteArgs {
             .unwrap()
             .to_owned();
 
-        Ok(EnrichedNoteArgs {
+        Ok(Self {
             vault,
             note_path,
             note_file,
@@ -266,16 +263,16 @@ fn create_note(note: &EnrichedNoteArgs, note_contents: &str) -> anyhow::Result<(
     fs::create_dir_all(note_dir)
         .with_context(|| format!("Could not create directory {}", note_dir.display()))?;
 
-    fs::write(&note.note_path, &note_contents)
+    fs::write(&note.note_path, note_contents)
         .with_context(|| format!("Could not create note {}", note.note_path.display()))?;
 
     Ok(())
 }
 
 fn create(note: EnrichedNoteArgs, stdin: Option<String>) -> CommandResult {
-    let note_input: String = stdin.unwrap_or("".to_string());
+    let note_input: String = stdin.unwrap_or_default();
 
-    let initial_note_content = initial_note_content_from_stdin(note_input.clone())?;
+    let initial_note_content = initial_note_content_from_stdin(note_input)?;
 
     create_note(&note, &initial_note_content)?;
 
@@ -334,7 +331,7 @@ fn edit(note: EnrichedNoteArgs, create_flag: &bool) -> CommandResult {
 
         if confirmation || *create_flag {
             let note_contents = "";
-            create_note(&note, &note_contents)?;
+            create_note(&note, note_contents)?;
         } else {
             return Ok(Some("Aborted".to_string()));
         }
@@ -403,7 +400,7 @@ fn maybe_stdin() -> anyhow::Result<Option<String>> {
     match isnt(Stream::Stdin) {
         true => {
             let mut buffer = String::new();
-            std::io::stdin().read_line(&mut buffer)?;
+            io::stdin().read_line(&mut buffer)?;
             Ok(Some(buffer))
         }
         false => Ok(None),

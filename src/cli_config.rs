@@ -25,18 +25,14 @@ pub struct File {
 fn get_config_dir() -> &'static PathBuf {
     static CONFIG_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-    CONFIG_DIR.get_or_init(|| {
-        let config_dir = match env::var("OBX_CONFIG_DIR") {
-            Ok(dir) => PathBuf::from(dir),
-            Err(VarError::NotPresent) => {
-                let strategy =
-                    etcetera::choose_base_strategy().expect("etcetera base strategy should work");
-                strategy.config_dir().join("obx")
-            }
-            _ => panic!("Malformed OBX_CONFIG_DIR"),
-        };
-
-        config_dir
+    CONFIG_DIR.get_or_init(|| match env::var("OBX_CONFIG_DIR") {
+        Ok(dir) => PathBuf::from(dir),
+        Err(VarError::NotPresent) => {
+            let strategy =
+                etcetera::choose_base_strategy().expect("etcetera base strategy should work");
+            strategy.config_dir().join("obx")
+        }
+        _ => panic!("Malformed OBX_CONFIG_DIR"),
     })
 }
 
@@ -67,9 +63,9 @@ pub fn exists() -> bool {
     Path::exists(&config_path)
 }
 
-pub fn write(new_config: File) -> anyhow::Result<()> {
+pub fn write(new_config: &File) -> anyhow::Result<()> {
     let config_path = get_config_path();
-    let serialized = serde_yaml::to_string(&new_config)?;
+    let serialized = serde_yaml::to_string(new_config)?;
 
     fs::write(&config_path, serialized)
         .with_context(|| format!("failed to write to config file {}", config_path.display()))
@@ -79,7 +75,7 @@ impl TryFrom<app_settings::Settings> for File {
     type Error = anyhow::Error;
 
     fn try_from(settings: app_settings::Settings) -> Result<Self, Self::Error> {
-        let vaults: Vec<Vault> = Vec::from_iter(settings.vaults.iter().map(|(_, vault)| {
+        let vaults: Vec<Vault> = Vec::from_iter(settings.vaults.values().map(|vault| {
             Vault {
                 // @TODO: fn to get name from path
                 name: vault
@@ -103,9 +99,9 @@ impl TryFrom<app_settings::Settings> for File {
                 bail!("Settings must contain at least one vault")
             }
             _n => {
-                let config = File {
+                let config = Self {
                     current_vault: vaults[0].clone().name,
-                    vaults: vaults,
+                    vaults,
                 };
 
                 Ok(config)
@@ -129,7 +125,7 @@ pub fn create_from_settings() -> anyhow::Result<File> {
     let settings = app_settings::read()?;
     let config = File::try_from(settings)?;
 
-    write(config.clone())?;
+    write(&config)?;
 
     Ok(config)
 }

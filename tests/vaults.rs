@@ -72,12 +72,12 @@ mod vaults {
         #[test]
         fn prints_vault_list() {
             let cmd = Obx::from_command("vaults list").with_config_file(indoc! {
-                r#"
+                r"
                 current_vault: some-vault
                 vaults:
                     - name: some-vault
                       path: /some/path
-            "#
+            "
             });
 
             cmd.assert_stdout(indoc! {"
@@ -92,12 +92,12 @@ mod vaults {
         #[test]
         fn prints_vault_list_as_json() {
             let cmd = Obx::from_command("vaults list -f json").with_config_file(indoc! {
-                r#"
+                r"
                 current_vault: some-vault
                 vaults:
                     - name: some-vault
                       path: /some/path
-            "#
+            "
             });
 
             let stdout_match = &json!([

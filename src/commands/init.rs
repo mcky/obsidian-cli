@@ -26,7 +26,7 @@ pub fn entry(cmd: &InitCommand) -> CommandResult {
                 interactive_switch(&config, "Which vault would you like to set as the current");
             config.current_vault = next_vault;
         }
-        cli_config::write(config.clone())?;
+        cli_config::write(&config)?;
     }
 
     Ok(None)

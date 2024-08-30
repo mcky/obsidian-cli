@@ -34,11 +34,11 @@ mod notes {
         #[test]
         fn prints_note_markdown_content() {
             Obx::from_command("notes view simple-note.md").assert_stdout(indoc! {
-            r#"
+            r"
                 # Simple note
 
                 This is the contents of simple-note.md
-            "#
+            "
             });
         }
 
@@ -55,7 +55,7 @@ mod notes {
         #[test]
         #[ignore = "render command not implemented"]
         fn pretty_prints_note() {
-            Obx::from_command("notes render complex-note.md").assert_stdout(indoc! {r#"
+            Obx::from_command("notes render complex-note.md").assert_stdout(indoc! {r"
                 ┄Rich note
                 
                 This is the contents of complex-note.md
@@ -67,24 +67,24 @@ mod notes {
                 • item 3
 
                 An outbound link, and a [[simple-note |backlink]]
-            "#});
+            "});
 
-            Obx::from_command("notes render table.md").assert_stdout(indoc! {r#"
+            Obx::from_command("notes render table.md").assert_stdout(indoc! {r"
                 | Command         | Description                      |
                 |-----------------|----------------------------------|
                 | note view       | Print the raw markdown of a note |
                 | note render     | Pretty-print a notes markdown    |
                 | note properties | Print a notes properties         |
-            "#});
+            "});
         }
 
         #[test]
         #[ignore = "render command not implemented"]
         fn renders_without_frontmatter() {
             Obx::from_command("notes render with-fm-properties.md").assert_stdout(indoc! {
-            r#"The main content of the file
+            r"The main content of the file
 
-            "#
+            "
             });
         }
 
@@ -92,8 +92,8 @@ mod notes {
         #[ignore = "wikilink rewriting not implemented"]
         fn backlinks_replaced_with_clickable() {
             Obx::from_command("notes render link-types.md").assert_stdout(indoc! {
-            r#"
-            "#
+            r"
+            "
             });
         }
     }
@@ -166,7 +166,7 @@ mod notes {
 
         #[test]
         fn prints_on_editor_fail() {
-            let cmd = Obx::from_command("notes edit simple-note.md").with_editor(r#"exit 1"#);
+            let cmd = Obx::from_command("notes edit simple-note.md").with_editor(r"exit 1");
 
             cmd.assert_stderr("Editor exited with non-0 exit code\n");
         }
@@ -287,7 +287,7 @@ mod notes {
 
         #[test]
         fn prints_frontmatter_properties_as_table() {
-            Obx::from_command("notes properties with-fm-properties.md").assert_stdout(indoc! { r#"
+            Obx::from_command("notes properties with-fm-properties.md").assert_stdout(indoc! { r"
                 ┌───────────────┬──────────────┐
                 │ Property      │ Value        │
                 ├───────────────┼──────────────┤
@@ -296,19 +296,19 @@ mod notes {
                 │ test-number   │ 100          │
                 │ test-str      │ a string val │
                 └───────────────┴──────────────┘
-            "# });
+            " });
         }
 
         #[test]
         #[ignore = "file meta properties not implemented"]
         fn prints_meta_properties() {
             Obx::from_command("notes properties empty-note.md --include-meta").assert_stdout(
-                indoc! { r#"
+                indoc! { r"
                 | property      | value                  |
                 |---------------|------------------------|
                 | path          | /path/to/empty-note.md |
                 | created-at    | xxxx                   |
-                "# },
+                " },
             );
         }
 
@@ -338,11 +338,11 @@ mod notes {
         #[ignore = "backlinks not implemented"]
         fn prints_backlinks_as_table() {
             Obx::from_command("notes backlinks backlinked-to.md -f json").assert_stdout(
-                indoc! { r#"
+                indoc! { r"
                 | note          | reference                  |
                 |---------------|----------------------------|
                 | /path/to/another-file.md | [[My backlink]] |
-                "# },
+                " },
             );
         }
 
@@ -363,7 +363,7 @@ mod notes {
         #[test]
         #[ignore = "export command not implemented"]
         fn exports_to_html() {
-            Obx::from_command("notes export complex-note.md -f html").assert_stdout(indoc! { r#"
+            Obx::from_command("notes export complex-note.md -f html").assert_stdout(indoc! { r"
                     <table>
                         <thead>
                             <tr>
@@ -382,7 +382,7 @@ mod notes {
                     <h1>Rich note</h1>
 
                     <p>This is the contents of complex-note.md</p>
-                "# });
+                " });
         }
 
         #[test]
