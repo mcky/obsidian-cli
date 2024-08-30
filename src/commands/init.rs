@@ -32,7 +32,7 @@ pub fn entry(cmd: &InitCommand) -> CommandResult {
     Ok(None)
 }
 
-fn create_or_overwrite_config(cmd: &InitCommand) -> anyhow::Result<Option<cli_config::File>> {
+fn create_or_overwrite_config(cmd: &InitCommand) -> anyhow::Result<Option<cli_config::Config>> {
     let config_file_exists = cli_config::exists();
     let config_path = cli_config::get_config_path();
 

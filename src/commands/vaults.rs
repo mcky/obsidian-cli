@@ -134,7 +134,7 @@ fn list(list_format: &ListFormats) -> CommandResult {
     Ok(Some(formatted))
 }
 
-pub fn format_vault_table(config: &cli_config::File) -> String {
+pub fn format_vault_table(config: &cli_config::Config) -> String {
     let mut builder = Builder::new();
 
     for v in &config.vaults {
@@ -171,7 +171,7 @@ fn switch(vault_name_arg: &Option<String>) -> CommandResult {
     Ok(Some(format!("Switched to vault {vault_name}")))
 }
 
-pub fn interactive_switch(config: &cli_config::File, message: &str) -> String {
+pub fn interactive_switch(config: &cli_config::Config, message: &str) -> String {
     // Construct a list of vaults in the format `vault (path)`
     let vaults: Vec<String> = config
         .vaults

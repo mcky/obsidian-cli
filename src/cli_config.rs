@@ -1,6 +1,5 @@
 use crate::app_settings;
 use anyhow::{bail, Context};
-use config::Config;
 use etcetera::BaseStrategy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -17,7 +16,7 @@ pub struct Vault {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct File {
+pub struct Config {
     pub current_vault: String,
     pub vaults: Vec<Vault>,
 }
@@ -41,19 +40,19 @@ pub fn get_config_path() -> PathBuf {
     config_dir.join("config.yml")
 }
 
-fn get_config() -> anyhow::Result<Config> {
+fn get_config() -> anyhow::Result<config::Config> {
     let config_path = get_config_path();
 
-    let settings = Config::builder()
+    let settings = config::Config::builder()
         .add_source(config::File::from(config_path))
         .build()?;
 
     Ok(settings)
 }
 
-pub fn read() -> anyhow::Result<File> {
+pub fn read() -> anyhow::Result<Config> {
     let config = get_config()?
-        .try_deserialize::<File>()
+        .try_deserialize::<Config>()
         .context("failed to deserialize config")?;
     Ok(config)
 }
@@ -63,7 +62,7 @@ pub fn exists() -> bool {
     Path::exists(&config_path)
 }
 
-pub fn write(new_config: &File) -> anyhow::Result<()> {
+pub fn write(new_config: &Config) -> anyhow::Result<()> {
     let config_path = get_config_path();
     let serialized = serde_yaml::to_string(new_config)?;
 
@@ -71,7 +70,7 @@ pub fn write(new_config: &File) -> anyhow::Result<()> {
         .with_context(|| format!("failed to write to config file {}", config_path.display()))
 }
 
-impl TryFrom<app_settings::Settings> for File {
+impl TryFrom<app_settings::Settings> for Config {
     type Error = anyhow::Error;
 
     fn try_from(settings: app_settings::Settings) -> Result<Self, Self::Error> {
@@ -110,7 +109,7 @@ impl TryFrom<app_settings::Settings> for File {
     }
 }
 
-pub fn create_from_settings() -> anyhow::Result<File> {
+pub fn create_from_settings() -> anyhow::Result<Config> {
     let config_dir = get_config_dir();
     let config_path = get_config_path();
 
@@ -123,7 +122,7 @@ pub fn create_from_settings() -> anyhow::Result<File> {
         .with_context(|| format!("failed to create config file at {}", config_path.display()))?;
 
     let settings = app_settings::read()?;
-    let config = File::try_from(settings)?;
+    let config = Config::try_from(settings)?;
 
     write(&config)?;
 
