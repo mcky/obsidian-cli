@@ -118,6 +118,47 @@ mod notes {
         }
 
         #[test]
+        fn stdin_content_present_in_file_body() {
+            let stdin_content = "This content was passed via stdin";
+            let cmd = Obx::from_command("notes create stdin-note.md");
+
+            // assert_cmd doesn't add `write_stdin` to std::process::Command
+            // so we have to wrap the command and call `write_stdin` manually
+            let mut wrapped_cmd = assert_cmd::Command::from(cmd.cmd);
+            wrapped_cmd.write_stdin(stdin_content);
+
+            let created_file = &cmd.temp_dir.child("main-vault/stdin-note.md");
+
+            let _ = &wrapped_cmd.assert().success();
+
+            created_file.assert(predicate::str::contains(stdin_content));
+        }
+
+        #[test]
+        fn json_stdin_content_added_as_frontmatter() {
+            let json_content = r#"{"title": "Test Note", "tags": ["test", "json"]}"#;
+            let cmd = Obx::from_command("notes create json-frontmatter-note.md");
+
+            let mut wrapped_cmd = assert_cmd::Command::from(cmd.cmd);
+            wrapped_cmd.write_stdin(json_content);
+
+            let created_file = &cmd.temp_dir.child("main-vault/json-frontmatter-note.md");
+
+            let _ = &wrapped_cmd.assert().success();
+
+            let file_content = indoc! {"
+                ---
+                title: Test Note
+                tags:
+                - test
+                - json
+                ---
+            "};
+
+            created_file.assert(predicate::str::diff(file_content));
+        }
+
+        #[test]
         fn allows_specifying_vault() {
             Obx::from_command("notes create created-in-another-vault --vault=secondary")
                 .assert_created("another/path/created-in-another-vault.md");

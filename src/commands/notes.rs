@@ -7,7 +7,7 @@ use anyhow::{anyhow, Context};
 use atty::{isnt, Stream};
 use clap::{Args, Subcommand};
 use dialoguer::Confirm;
-use libobsidian::ObsidianNote;
+use libobsidian::{ObsidianNote, Properties};
 use std::{env, fs, io, path::PathBuf, process};
 use tabled::{builder::Builder, settings::Style};
 
@@ -251,29 +251,57 @@ fn uri(note: EnrichedNoteArgs) -> CommandResult {
     Ok(Some(uri))
 }
 
-fn create_note(note: &EnrichedNoteArgs, note_contents: &str) -> anyhow::Result<()> {
-    // Ensure the directory exists for a provided note
-    // before we try to write to it
-    let note_dir = &note
-        .note_path
+fn write_note(obsidian_note: &ObsidianNote) -> anyhow::Result<()> {
+    let note_dir = obsidian_note
+        .file_path
         .parent()
-        .expect("note_path should have a parent");
+        .expect("file_path should have a parent");
 
     fs::create_dir_all(note_dir)
         .with_context(|| format!("Could not create directory {}", note_dir.display()))?;
 
-    fs::write(&note.note_path, note_contents)
-        .with_context(|| format!("Could not create note {}", note.note_path.display()))?;
+    let file_contents = if let Some(properties) = &obsidian_note.properties {
+        let yaml_str = serde_yaml::to_string(&properties)?;
+        let as_frontmatter = format!("---\n{}\n---\n", yaml_str.trim());
+        let mut file_contents = obsidian_note.file_body.clone();
+        file_contents.insert_str(0, &as_frontmatter);
+        file_contents
+    } else {
+        obsidian_note.file_body.clone()
+    };
+
+    fs::write(&obsidian_note.file_path, &file_contents).with_context(|| {
+        format!(
+            "Could not create note {}",
+            obsidian_note.file_path.display()
+        )
+    })?;
 
     Ok(())
 }
 
+fn create_note(note: &EnrichedNoteArgs, note_contents: &str) -> anyhow::Result<()> {
+    let obsidian_note = ObsidianNote {
+        file_path: note.note_path.clone(),
+        file_raw_contents: Some(note_contents.to_string()),
+        file_body: note_contents.to_string(),
+        properties: None,
+    };
+
+    write_note(&obsidian_note)
+}
+
 fn create(note: EnrichedNoteArgs, stdin: Option<String>) -> CommandResult {
-    let note_input: String = stdin.unwrap_or_default();
+    let (content, properties) = parse_create_stdin(stdin)?;
 
-    let initial_note_content = initial_note_content_from_stdin(note_input)?;
+    let obsidian_note = ObsidianNote {
+        file_path: note.note_path.clone(),
+        file_raw_contents: Some(content.clone().unwrap_or_default()),
+        file_body: content.unwrap_or_default(),
+        properties: properties,
+    };
 
-    create_note(&note, &initial_note_content)?;
+    write_note(&obsidian_note)?;
 
     let editor = env::var("EDITOR").context("$EDITOR not found")?;
 
@@ -291,21 +319,25 @@ fn create(note: EnrichedNoteArgs, stdin: Option<String>) -> CommandResult {
     }
 }
 
-fn initial_note_content_from_stdin(stdin: String) -> anyhow::Result<String> {
-    let trimmed = stdin.trim();
+fn parse_create_stdin(
+    stdin: Option<String>,
+) -> anyhow::Result<(Option<String>, Option<Properties>)> {
+    let note_input: String = stdin.unwrap_or_default();
+    let trimmed = note_input.trim();
 
     // Check if the trimmed input looks like JSON
     if trimmed.starts_with('{') && trimmed.ends_with('}') {
         match serde_json::from_str::<serde_json::Value>(trimmed) {
             Ok(json) => {
-                let yaml = serde_yaml::to_string(&json)?;
-                let as_frontmatter = format!("---\n{}\n---\n", yaml.trim());
-                Ok(as_frontmatter)
+                let yaml_str = serde_yaml::to_string(&json)?;
+                let yaml_values: serde_yaml::Value = serde_yaml::from_str(&yaml_str)?;
+
+                Ok((Some("".to_string()), Some(yaml_values)))
             }
             Err(e) => Err(anyhow!("Input looks like JSON but failed to parse: {}", e)),
         }
     } else {
-        Ok(stdin)
+        Ok((Some(note_input), None))
     }
 }
 
